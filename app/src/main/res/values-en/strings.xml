@@ -1,0 +1,92 @@
+<resources>
+    <string name="app_name">NightLife Finder</string>
+
+    <!-- Logo / Common -->
+    <string name="logo_text">N</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="view_all">View all</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_favorite">Favorites</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Home -->
+    <string name="search_food_hint">Search late-night food...</string>
+    <string name="flash_deals">Flash Deals</string>
+    <string name="hot_this_week">Hot This Week</string>
+    <string name="near_you">Near You</string>
+
+    <!-- Map -->
+    <string name="search_map_hint">Search late-night places in Hanoi...</string>
+    <string name="bun_bo">Beef noodle</string>
+    <string name="grill">Grill</string>
+    <string name="hotpot">Hotpot</string>
+    <string name="milk_tea">Milk tea</string>
+    <string name="pizza">Pizza</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Messages</string>
+    <string name="new_chat_title">New message</string>
+    <string name="search_chat_hint">Search conversations...</string>
+    <string name="search_new_chat_hint">Search places to message...</string>
+    <string name="all">All</string>
+    <string name="unread">Unread</string>
+    <string name="message">Message</string>
+    <string name="message_input_hint">Message the restaurant...</string>
+
+    <!-- Favorite -->
+    <string name="favorite_title">Favorite Places</string>
+    <string name="favorite_subtitle">12 saved places</string>
+    <string name="recent_saved">RECENTLY SAVED</string>
+    <string name="history">History</string>
+    <string name="visited_places">VISITED PLACES</string>
+    <string name="direction">Directions</string>
+    <string name="chat_box">Chat</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_name">Nguyen Minh Tuan</string>
+    <string name="profile_location">Hanoi, Vietnam</string>
+    <string name="profile_points">48 Points</string>
+    <string name="profile_favorites">12 Favorites</string>
+    <string name="profile_reviews">7 Reviews</string>
+    <string name="edit_profile">Edit profile</string>
+
+    <string name="notification">Notifications</string>
+    <string name="voucher">Voucher</string>
+    <string name="support">Support</string>
+
+    <string name="section_account">ACCOUNT</string>
+    <string name="my_address">My address</string>
+    <string name="change_password">Change password</string>
+    <string name="social_link">Social links</string>
+
+    <string name="section_settings">SETTINGS</string>
+    <string name="dark_mode">Dark mode</string>
+    <string name="language">Language</string>
+    <string name="language_vi">Vietnamese</string>
+    <string name="language_en">English</string>
+    <string name="vietnamese">Vietnamese</string>
+    <string name="english">English</string>
+
+    <string name="section_other">OTHER</string>
+    <string name="help_center">Help center</string>
+    <string name="rate_app">Rate app</string>
+    <string name="logout">Log out</string>
+
+    <!-- Avatar -->
+    <string name="choose_avatar">Choose avatar</string>
+    <string name="drag_zoom_avatar">Drag / zoom the photo to frame your face</string>
+
+    <!-- Toast -->
+    <string name="you_are_on_home">You are on the Home page</string>
+    <string name="you_are_on_map">You are on the Map page</string>
+    <string name="you_are_on_chat">You are on the Chat page</string>
+    <string name="you_are_on_favorite">You are on the Favorites page</string>
+    <string name="you_are_on_profile">You are on the Profile page</string>
+</resources>
