@@ -4,78 +4,117 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Location;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.ContextCompat;
 
 import com.example.nightlife_finder.R;
-import com.example.nightlife_finder.interfaces.OnPlaceLoadedListener;
-import com.example.nightlife_finder.models.Place;
-import com.example.nightlife_finder.repositories.PlaceRepository;
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+
+import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Marker;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
-public class MapActivity extends BaseActivity implements OnMapReadyCallback {
+public class MapActivity extends BaseActivity {
 
-    private GoogleMap googleMap;
-    private boolean is3DMode = true;
-    private float currentZoom = 15.5f;
+    // Vị trí mặc định khi không lấy được GPS:
+    // 60 QL1A, Thường Tín, Hà Nội, Việt Nam
+    private static final double DEFAULT_LAT = 20.8712;
+    private static final double DEFAULT_LON = 105.8643;
 
-    private TextView txtToggle3D;
+    private MapView osmMap;
+    private FusedLocationProviderClient fusedLocationClient;
 
     private TextView placeEmoji;
     private TextView placeName;
-    private TextView placeInfo;
-    private TextView placeRoute;
+    private TextView placeType;
+    private TextView placeDistance;
+    private TextView placeOpenTime;
 
-    private TextView chipBunBo;
-    private TextView chipNuong;
-    private TextView chipLau;
-    private TextView chipTraSua;
-    private TextView chipPizza;
+    private TextView chipAll;
+    private TextView chipFood;
+    private TextView chipCafe;
+    private TextView chipTea;
+    private TextView chipStore;
+    private TextView chipSupermarket;
 
-    private PlaceRepository placeRepository;
-    private final List<Place> allPlaces = new ArrayList<>();
-    private final Map<String, Marker> mapMarkers = new HashMap<>();
-    private Place selectedPlace;
+    private double userLat = DEFAULT_LAT;
+    private double userLon = DEFAULT_LON;
 
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private String currentFilter = "all";
+    private boolean focusUserAfterRender = false;
+    private boolean isUsingDefaultLocation = true;
+
+    private final List<DemoPlace> demoPlaces = new ArrayList<>();
+
+    private final ActivityResultLauncher<String> locationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    loadCurrentLocation();
+                } else {
+                    useDefaultFallbackLocation("Bạn chưa cấp quyền vị trí");
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+        Configuration.getInstance().setUserAgentValue("NightLifeFinderDemo/1.0");
 
-        setupSystemBars();
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
-        placeRepository = new PlaceRepository();
-
+        setupSystemBars();
         bindViews();
-        setupMapButtons();
-        setupCategoryChips();
+        setupMap();
+        setupButtons();
         setupBottomNavigation();
 
-        // Load the SupportMapFragment
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.realMap);
-        if (mapFragment != null) {
-            mapFragment.getMapAsync(this);
+        createHaNoiDemoPlaces();
+
+        focusUserAfterRender = true;
+        requestLocationPermissionFirst();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (osmMap != null) {
+            osmMap.onResume();
+        }
+
+        applyGlobalUi();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (osmMap != null) {
+            osmMap.onPause();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (osmMap != null) {
+            osmMap.onDetach();
         }
     }
 
@@ -85,280 +124,459 @@ public class MapActivity extends BaseActivity implements OnMapReadyCallback {
     }
 
     private void bindViews() {
-        txtToggle3D = findViewById(R.id.txtToggle3D);
+        osmMap = findViewById(R.id.osmMap);
 
         placeEmoji = findViewById(R.id.placeEmoji);
         placeName = findViewById(R.id.placeName);
-        placeInfo = findViewById(R.id.placeInfo);
-        placeRoute = findViewById(R.id.placeRoute);
+        placeType = findViewById(R.id.placeType);
+        placeDistance = findViewById(R.id.placeDistance);
+        placeOpenTime = findViewById(R.id.placeOpenTime);
 
-        chipBunBo = findViewById(R.id.chipBunBo);
-        chipNuong = findViewById(R.id.chipNuong);
-        chipLau = findViewById(R.id.chipLau);
-        chipTraSua = findViewById(R.id.chipTraSua);
-        chipPizza = findViewById(R.id.chipPizza);
+        chipAll = findViewById(R.id.chipAll);
+        chipFood = findViewById(R.id.chipFood);
+        chipCafe = findViewById(R.id.chipCafe);
+        chipTea = findViewById(R.id.chipTea);
+        chipStore = findViewById(R.id.chipStore);
+        chipSupermarket = findViewById(R.id.chipSupermarket);
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
-    @Override
-    public void onMapReady(@NonNull GoogleMap map) {
-        this.googleMap = map;
+    private void setupMap() {
+        osmMap.setTileSource(TileSourceFactory.MAPNIK);
+        osmMap.setMultiTouchControls(true);
 
-        // Customise maps UI settings
-        googleMap.getUiSettings().setMapToolbarEnabled(false);
-        googleMap.getUiSettings().setZoomControlsEnabled(false);
-
-        // Center initially on Hoan Kiem Lake, Hanoi
-        LatLng hanoiLocation = new LatLng(21.0333, 105.8500);
-        moveCameraTo(hanoiLocation, currentZoom, is3DMode ? 45f : 0f);
-
-        // Access location permissions
-        requestLocationPermission();
-
-        // Retrieve places list from Firestore
-        loadPlacesFromFirestore();
-
-        // Handle Marker Click
-        googleMap.setOnMarkerClickListener(marker -> {
-            Place place = (Place) marker.getTag();
-            if (place != null) {
-                selectedPlace = place;
-                String emoji = getEmojiForCategory(place.getCategory());
-                updatePlaceInfo(
-                        emoji,
-                        place.getName(),
-                        place.getOpenTime() + " • 📍 " + place.getAddress(),
-                        "AI gợi ý: đường nhanh nhất đến " + place.getName()
-                );
-            }
-            return false;
-        });
+        GeoPoint haNoiCenter = new GeoPoint(21.0285, 105.8542);
+        osmMap.getController().setZoom(11.7);
+        osmMap.getController().setCenter(haNoiCenter);
     }
 
-    private void requestLocationPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    LOCATION_PERMISSION_REQUEST_CODE);
-        } else {
-            if (googleMap != null) {
-                googleMap.setMyLocationEnabled(true);
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (googleMap != null && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    googleMap.setMyLocationEnabled(true);
-                }
-            }
-        }
-    }
-
-    private void loadPlacesFromFirestore() {
-        placeRepository.getPlaces(new OnPlaceLoadedListener() {
-            @Override
-            public void onSuccess(List<Place> places) {
-                allPlaces.clear();
-                allPlaces.addAll(places);
-
-                if (googleMap != null) {
-                    googleMap.clear();
-                    mapMarkers.clear();
-
-                    for (Place place : allPlaces) {
-                        LatLng pos = new LatLng(place.getLat(), place.getLng());
-                        float hue = getMarkerColorForCategory(place.getCategory());
-
-                        Marker marker = googleMap.addMarker(new MarkerOptions()
-                                .position(pos)
-                                .title(place.getName())
-                                .icon(BitmapDescriptorFactory.defaultMarker(hue)));
-
-                        if (marker != null) {
-                            marker.setTag(place);
-                            mapMarkers.put(place.getId(), marker);
-                        }
-                    }
-                }
-
-                // Initial first loaded spot selection card
-                if (!allPlaces.isEmpty()) {
-                    Place initial = allPlaces.get(0);
-                    selectedPlace = initial;
-                    updatePlaceInfo(
-                            getEmojiForCategory(initial.getCategory()),
-                            initial.getName(),
-                            initial.getOpenTime() + " • 0,5 km",
-                            "AI gợi ý: đường nhanh nhất khoảng 5 phút"
-                    );
-                }
-            }
-
-            @Override
-            public void onError(String error) {
-                Toast.makeText(MapActivity.this, "Lỗi tải bản đồ: " + error, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void setupMapButtons() {
+    private void setupButtons() {
         findViewById(R.id.btnMyLocation).setOnClickListener(v -> {
-            LatLng hanoiLocation = new LatLng(21.0333, 105.8500);
-            currentZoom = 15.5f;
-            is3DMode = true;
-            txtToggle3D.setText("3D");
-            moveCameraTo(hanoiLocation, currentZoom, 45f);
-
-            updatePlaceInfo(
-                    "◎",
-                    "Vị trí của bạn",
-                    "Hồ Hoàn Kiếm • Hà Nội",
-                    "Bạn đang ở khu vực trung tâm Hà Nội"
-            );
-            Toast.makeText(this, "Đã quay về vị trí Hồ Hoàn Kiếm, Hà Nội", Toast.LENGTH_SHORT).show();
+            focusUserAfterRender = true;
+            requestLocationPermissionFirst();
         });
 
         findViewById(R.id.btnZoomIn).setOnClickListener(v -> {
-            if (googleMap != null && currentZoom < 21f) {
-                currentZoom += 1f;
-                googleMap.animateCamera(CameraUpdateFactory.zoomTo(currentZoom));
+            double zoom = osmMap.getZoomLevelDouble();
+
+            if (zoom < 20) {
+                osmMap.getController().zoomTo(zoom + 1);
             }
         });
 
         findViewById(R.id.btnZoomOut).setOnClickListener(v -> {
-            if (googleMap != null && currentZoom > 2f) {
-                currentZoom -= 1f;
-                googleMap.animateCamera(CameraUpdateFactory.zoomTo(currentZoom));
+            double zoom = osmMap.getZoomLevelDouble();
+
+            if (zoom > 3) {
+                osmMap.getController().zoomTo(zoom - 1);
             }
         });
 
-        findViewById(R.id.btnToggle3D).setOnClickListener(v -> {
-            if (googleMap == null) return;
-            is3DMode = !is3DMode;
-
-            CameraPosition currentCam = googleMap.getCameraPosition();
-            float newTilt = is3DMode ? 45f : 0f;
-
-            txtToggle3D.setText(is3DMode ? "3D" : "2D");
-            Toast.makeText(this, is3DMode ? "Đã bật chế độ 3D" : "Đã bật chế độ 2D", Toast.LENGTH_SHORT).show();
-
-            moveCameraTo(currentCam.target, currentCam.zoom, newTilt);
+        findViewById(R.id.btnReloadPlaces).setOnClickListener(v -> {
+            showPlacesByFilter(currentFilter);
+            Toast.makeText(this, "Đã tải lại dữ liệu demo", Toast.LENGTH_SHORT).show();
         });
+
+        chipAll.setOnClickListener(v -> chooseFilter("all", chipAll));
+        chipFood.setOnClickListener(v -> chooseFilter("food", chipFood));
+        chipCafe.setOnClickListener(v -> chooseFilter("cafe", chipCafe));
+        chipTea.setOnClickListener(v -> chooseFilter("tea", chipTea));
+        chipStore.setOnClickListener(v -> chooseFilter("store", chipStore));
+        chipSupermarket.setOnClickListener(v -> chooseFilter("supermarket", chipSupermarket));
     }
 
-    private void moveCameraTo(LatLng target, float zoom, float tilt) {
-        if (googleMap == null) return;
-
-        CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(target)
-                .zoom(zoom)
-                .tilt(tilt)
-                .bearing(0)
-                .build();
-
-        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-    }
-
-    private void setupCategoryChips() {
-        chipBunBo.setOnClickListener(v -> filterByCategory("Bún bò", chipBunBo));
-        chipNuong.setOnClickListener(v -> filterByCategory("Nướng", chipNuong));
-        chipLau.setOnClickListener(v -> filterByCategory("Lẩu", chipLau));
-        chipTraSua.setOnClickListener(v -> filterByCategory("Trà sữa", chipTraSua));
-        chipPizza.setOnClickListener(v -> filterByCategory("Pizza", chipPizza));
-    }
-
-    private void filterByCategory(String category, TextView activeChip) {
+    private void chooseFilter(String filter, TextView activeChip) {
+        currentFilter = filter;
         setActiveChip(activeChip);
-        Toast.makeText(this, "Đang lọc: " + category, Toast.LENGTH_SHORT).show();
+        showPlacesByFilter(filter);
+    }
 
-        Place firstMatch = null;
-        for (Place place : allPlaces) {
-            Marker marker = mapMarkers.get(place.getId());
-            if (marker != null) {
-                boolean visible = place.getCategory().equalsIgnoreCase(category);
-                marker.setVisible(visible);
-                if (visible && firstMatch == null) {
-                    firstMatch = place;
-                }
+    private void requestLocationPermissionFirst() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            loadCurrentLocation();
+        } else {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
+
+    private void loadCurrentLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            useDefaultFallbackLocation("Chưa cấp quyền vị trí");
+            return;
+        }
+
+        updatePlaceInfo(
+                "⌖",
+                "Đang lấy vị trí hiện tại...",
+                "GPS / Wi-Fi / mạng di động",
+                "Vui lòng chờ vài giây",
+                "Nếu GPS lỗi, app sẽ dùng vị trí mặc định"
+        );
+
+        CancellationTokenSource tokenSource = new CancellationTokenSource();
+
+        fusedLocationClient
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, tokenSource.getToken())
+                .addOnSuccessListener(location -> {
+                    if (location != null && isValidVietnamLocation(location)) {
+                        userLat = location.getLatitude();
+                        userLon = location.getLongitude();
+
+                        isUsingDefaultLocation = false;
+                        focusUserAfterRender = true;
+
+                        showPlacesByFilter(currentFilter);
+
+                        updatePlaceInfo(
+                                "📍",
+                                "Vị trí hiện tại",
+                                "GPS đã xác nhận vị trí của bạn",
+                                "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
+                                "Đang hiển thị địa điểm gần khu vực của bạn"
+                        );
+
+                        Toast.makeText(this, "Đã lấy vị trí hiện tại", Toast.LENGTH_SHORT).show();
+                    } else {
+                        loadLastLocationFallback();
+                    }
+                })
+                .addOnFailureListener(e -> loadLastLocationFallback());
+    }
+
+    private void loadLastLocationFallback() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            useDefaultFallbackLocation("Chưa cấp quyền vị trí");
+            return;
+        }
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null && isValidVietnamLocation(location)) {
+                        userLat = location.getLatitude();
+                        userLon = location.getLongitude();
+
+                        isUsingDefaultLocation = false;
+                        focusUserAfterRender = true;
+
+                        showPlacesByFilter(currentFilter);
+
+                        updatePlaceInfo(
+                                "📍",
+                                "Vị trí hiện tại",
+                                "Đã lấy vị trí gần nhất của bạn",
+                                "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
+                                "Đang hiển thị địa điểm gần khu vực của bạn"
+                        );
+
+                        Toast.makeText(this, "Đã lấy vị trí gần nhất", Toast.LENGTH_SHORT).show();
+                    } else {
+                        useDefaultFallbackLocation("GPS không hợp lệ, dùng vị trí mặc định");
+                    }
+                })
+                .addOnFailureListener(e ->
+                        useDefaultFallbackLocation("Không lấy được GPS, dùng vị trí mặc định")
+                );
+    }
+
+    private boolean isValidVietnamLocation(Location location) {
+        if (location == null) {
+            return false;
+        }
+
+        double lat = location.getLatitude();
+        double lon = location.getLongitude();
+
+        return lat >= 8.0 && lat <= 24.5 && lon >= 102.0 && lon <= 110.5;
+    }
+
+    private void useDefaultFallbackLocation(String reason) {
+        userLat = DEFAULT_LAT;
+        userLon = DEFAULT_LON;
+
+        isUsingDefaultLocation = true;
+        focusUserAfterRender = true;
+
+        showPlacesByFilter(currentFilter);
+
+        updatePlaceInfo(
+                "📍",
+                "Vị trí mặc định",
+                "60 QL1A, Thường Tín, Hà Nội",
+                "Việt Nam",
+                reason
+        );
+
+        Toast.makeText(
+                this,
+                "Không lấy được GPS, dùng vị trí 60 QL1A Thường Tín",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+
+    private void zoomToUserLocation() {
+        GeoPoint userPoint = new GeoPoint(userLat, userLon);
+
+        osmMap.getController().animateTo(userPoint);
+        osmMap.getController().zoomTo(16.5);
+    }
+
+    private void createHaNoiDemoPlaces() {
+        demoPlaces.clear();
+
+        // HOÀN KIẾM
+        add("Bún Bò Cô Hoa Phố Cổ", "food", "Quán ăn / Bún bò", "Gần phố Hàng Bạc, Hoàn Kiếm, Hà Nội", "Mở 18:00 - 02:30", 21.0347, 105.8521, 92);
+        add("Phở Gà Chú Tùng Hàng Đào", "food", "Quán ăn / Phở", "Khu Hàng Đào, Hoàn Kiếm, Hà Nội", "Mở 19:00 - 03:00", 21.0332, 105.8510, 94);
+        add("Cà Phê Ven Hồ", "cafe", "Cafe / View hồ", "Gần Hồ Hoàn Kiếm, Hà Nội", "Mở 07:00 - 01:00", 21.0287, 105.8529, 88);
+        add("Trà Sữa Mây Hồng Phố Cổ", "tea", "Trà sữa / Đồ uống", "Khu phố cổ Hoàn Kiếm, Hà Nội", "Mở 24/7", 21.0315, 105.8502, 100);
+        add("Tiệm Tiện Lợi Minh Anh", "store", "Cửa hàng tiện lợi", "Phố Hàng Bạc, Hoàn Kiếm, Hà Nội", "Mở 24/7", 21.0340, 105.8537, 100);
+        add("Chợ Mini Tràng Tiền", "supermarket", "Siêu thị mini", "Khu Tràng Tiền, Hoàn Kiếm, Hà Nội", "Mở 08:00 - 23:00", 21.0252, 105.8568, 62);
+
+        // BA ĐÌNH
+        add("Bún Chả Cô Hạnh Kim Mã", "food", "Quán ăn / Bún chả", "Khu Kim Mã, Ba Đình, Hà Nội", "Mở 10:00 - 23:00", 21.0311, 105.8181, 70);
+        add("Lẩu Nhà Gió Giảng Võ", "food", "Quán ăn / Lẩu", "Khu Giảng Võ, Ba Đình, Hà Nội", "Mở 16:00 - 02:00", 21.0258, 105.8246, 86);
+        add("Cà Phê Trúc Bạch Xưa", "cafe", "Cafe / Chill", "Gần hồ Trúc Bạch, Ba Đình, Hà Nội", "Mở 07:00 - 00:30", 21.0450, 105.8412, 82);
+        add("Trà Chanh Góc Ngọc Hà", "tea", "Trà chanh / Đồ uống", "Khu Ngọc Hà, Ba Đình, Hà Nội", "Mở 15:00 - 01:30", 21.0372, 105.8282, 84);
+        add("Siêu Thị Nhỏ Liễu Giai", "supermarket", "Siêu thị mini", "Khu Liễu Giai, Ba Đình, Hà Nội", "Mở 08:00 - 23:00", 21.0346, 105.8125, 60);
+
+        // ĐỐNG ĐA
+        add("Mì Vằn Thắn Gia Khang", "food", "Quán ăn / Mì", "Khu Thái Hà, Đống Đa, Hà Nội", "Mở 18:00 - 01:30", 21.0145, 105.8219, 83);
+        add("Xôi Gà Cô Lan Chùa Bộc", "food", "Quán ăn / Xôi", "Khu Chùa Bộc, Đống Đa, Hà Nội", "Mở 20:00 - 03:00", 21.0079, 105.8282, 93);
+        add("Cà Phê Góc Học Bài", "cafe", "Cafe / Học tập", "Khu Nguyễn Trãi, Đống Đa, Hà Nội", "Mở 08:00 - 00:00", 21.0024, 105.8208, 76);
+        add("Trà Hoa Quả Nắng Mai", "tea", "Trà hoa quả / Đồ uống", "Khu Tây Sơn, Đống Đa, Hà Nội", "Mở 09:00 - 01:00", 21.0115, 105.8327, 84);
+        add("Cửa Hàng Tiện Lợi An Nhiên", "store", "Cửa hàng tiện lợi", "Khu Thái Hà, Đống Đa, Hà Nội", "Mở 24/7", 21.0137, 105.8192, 100);
+
+        // CẦU GIẤY
+        add("Quán Nướng Chú Mạnh", "food", "Quán ăn / Đồ nướng", "Khu Cầu Giấy, Hà Nội", "Mở 17:00 - 01:00", 21.0364, 105.7902, 84);
+        add("Bún Bò Cô Mai Duy Tân", "food", "Quán ăn / Bún bò", "Khu Duy Tân, Cầu Giấy, Hà Nội", "Mở 18:00 - 02:00", 21.0305, 105.7849, 89);
+        add("Cà Phê Lá Xanh", "cafe", "Cafe / Làm việc", "Khu Dịch Vọng, Cầu Giấy, Hà Nội", "Mở 07:00 - 01:00", 21.0330, 105.7938, 86);
+        add("Trà Sữa Mộc Xuân Thủy", "tea", "Trà sữa / Đồ uống", "Khu Xuân Thủy, Cầu Giấy, Hà Nội", "Mở 09:00 - 00:30", 21.0377, 105.7825, 80);
+        add("Siêu Thị Mini An Phát", "supermarket", "Siêu thị mini", "Khu Cầu Giấy, Hà Nội", "Mở 08:00 - 23:00", 21.0319, 105.7982, 60);
+
+        // THANH XUÂN
+        add("Lẩu Đêm Bếp Nhà", "food", "Quán ăn / Lẩu", "Khu Nguyễn Trãi, Thanh Xuân, Hà Nội", "Mở 16:00 - 02:00", 20.9955, 105.8062, 87);
+        add("Cà Phê Gác Nhỏ", "cafe", "Cafe / Trung tâm thương mại", "Khu Royal City, Thanh Xuân, Hà Nội", "Mở 08:00 - 23:30", 21.0028, 105.8155, 68);
+        add("Chợ Thực Phẩm Thanh Xuân", "supermarket", "Siêu thị thực phẩm", "Khu Thanh Xuân, Hà Nội", "Mở 07:00 - 00:00", 20.9896, 105.8121, 76);
+
+        // THƯỜNG TÍN
+        add("Phở Đêm Quốc Lộ 1A", "food", "Quán ăn / Phở", "Khu thị trấn Thường Tín, Hà Nội", "Mở 18:00 - 02:00", 20.8696, 105.8618, 86);
+        add("Bún Bò Chị Hương Quất Động", "food", "Quán ăn / Bún bò", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 17:30 - 01:00", 20.8876, 105.8537, 80);
+        add("Cơm Rang Anh Tú", "food", "Quán ăn / Cơm rang", "Khu trung tâm Thường Tín, Hà Nội", "Mở 16:00 - 01:30", 20.8709, 105.8650, 84);
+        add("Cà Phê Phố Huyện", "cafe", "Cafe / Gặp bạn bè", "Khu thị trấn Thường Tín, Hà Nội", "Mở 07:00 - 00:00", 20.8718, 105.8625, 72);
+        add("Trà Sữa Bông Mây", "tea", "Trà sữa / Đồ uống", "Khu trung tâm Thường Tín, Hà Nội", "Mở 24/7", 20.8701, 105.8604, 100);
+        add("Tiệm Tiện Lợi Quốc Lộ 1A", "store", "Cửa hàng tiện lợi", "Khu thị trấn Thường Tín, Hà Nội", "Mở 24/7", 20.8712, 105.8643, 100);
+        add("Siêu Thị Mini Thường Tín", "supermarket", "Siêu thị mini", "Khu trung tâm Thường Tín, Hà Nội", "Mở 08:00 - 23:00", 20.8690, 105.8637, 64);
+    }
+
+    private void add(
+            String name,
+            String category,
+            String type,
+            String address,
+            String openingHours,
+            double latitude,
+            double longitude,
+            int nightScore
+    ) {
+        demoPlaces.add(new DemoPlace(
+                name,
+                category,
+                type,
+                address,
+                openingHours,
+                latitude,
+                longitude,
+                nightScore
+        ));
+    }
+
+    private void showPlacesByFilter(String filter) {
+        osmMap.getOverlays().clear();
+
+        addMyLocationMarker();
+
+        int count = 0;
+
+        for (DemoPlace place : demoPlaces) {
+            if (filter.equals("all") || place.category.equals(filter)) {
+                addPlaceMarker(place);
+                count++;
             }
         }
 
-        if (firstMatch != null) {
-            selectedPlace = firstMatch;
-            LatLng target = new LatLng(firstMatch.getLat(), firstMatch.getLng());
-            moveCameraTo(target, currentZoom, is3DMode ? 45f : 0f);
+        osmMap.invalidate();
 
-            updatePlaceInfo(
-                    getEmojiForCategory(firstMatch.getCategory()),
-                    firstMatch.getName(),
-                    firstMatch.getOpenTime() + " • 📍 " + firstMatch.getAddress(),
-                    "AI gợi ý: đường nhanh nhất khoảng 5 phút"
-            );
+        if (focusUserAfterRender) {
+            zoomToUserLocation();
+            focusUserAfterRender = false;
         } else {
-            Toast.makeText(this, "Không tìm thấy quán nào thuộc nhóm " + category, Toast.LENGTH_SHORT).show();
+            if (filter.equals("all")) {
+                osmMap.getController().animateTo(new GeoPoint(21.0350, 105.8350));
+                osmMap.getController().zoomTo(11.7);
+            } else {
+                osmMap.getController().animateTo(new GeoPoint(21.0285, 105.8542));
+                osmMap.getController().zoomTo(12.4);
+            }
         }
+
+        updatePlaceInfo(
+                "✅",
+                "Đang hiển thị " + count + " địa điểm",
+                "Bộ lọc: " + getFilterName(filter),
+                "Dữ liệu demo có địa chỉ, giờ mở cửa, điểm đi đêm",
+                "Bấm marker để zoom tới địa điểm"
+        );
+    }
+
+    private void addMyLocationMarker() {
+        GeoPoint point = new GeoPoint(userLat, userLon);
+
+        Marker marker = new Marker(osmMap);
+        marker.setPosition(point);
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+
+        if (isUsingDefaultLocation) {
+            marker.setTitle("Vị trí hiện tại");
+            marker.setSnippet("60 QL1A, Thường Tín, Hà Nội, Việt Nam");
+        } else {
+            marker.setTitle("Vị trí hiện tại");
+            marker.setSnippet("Vị trí của bạn đã được xác nhận bằng GPS");
+        }
+
+        osmMap.getOverlays().add(marker);
+    }
+
+    private void addPlaceMarker(DemoPlace place) {
+        GeoPoint point = new GeoPoint(place.latitude, place.longitude);
+
+        Marker marker = new Marker(osmMap);
+        marker.setPosition(point);
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        marker.setTitle(place.name);
+        marker.setSnippet(place.type);
+
+        marker.setOnMarkerClickListener((m, mapView) -> {
+            zoomToPlace(place);
+            m.showInfoWindow();
+            return true;
+        });
+
+        osmMap.getOverlays().add(marker);
+    }
+
+    private void zoomToPlace(DemoPlace place) {
+        GeoPoint point = new GeoPoint(place.latitude, place.longitude);
+
+        osmMap.getController().animateTo(point);
+        osmMap.getController().zoomTo(18.5);
+
+        double distance = calculateDistance(place.latitude, place.longitude);
+
+        String distanceText;
+
+        if (distance >= 1000) {
+            distanceText = String.format(Locale.US, "%.1f km từ bạn", distance / 1000.0);
+        } else {
+            distanceText = Math.round(distance) + " m từ bạn";
+        }
+
+        String nightText = "Điểm đi đêm: " + place.nightScore + "/100";
+
+        if (place.nightScore >= 90) {
+            nightText += " • Rất phù hợp";
+        } else if (place.nightScore >= 75) {
+            nightText += " • Phù hợp";
+        } else {
+            nightText += " • Bình thường";
+        }
+
+        updatePlaceInfo(
+                getEmojiForCategory(place.category),
+                place.name,
+                place.type + " • " + distanceText,
+                place.address,
+                place.openingHours + " • " + nightText
+        );
+    }
+
+    private double calculateDistance(double lat, double lon) {
+        float[] results = new float[1];
+
+        Location.distanceBetween(
+                userLat,
+                userLon,
+                lat,
+                lon,
+                results
+        );
+
+        return results[0];
     }
 
     private void setActiveChip(TextView activeChip) {
-        chipBunBo.setBackgroundResource(R.drawable.chip_bg);
-        chipNuong.setBackgroundResource(R.drawable.chip_bg);
-        chipLau.setBackgroundResource(R.drawable.chip_bg);
-        chipTraSua.setBackgroundResource(R.drawable.chip_bg);
-        chipPizza.setBackgroundResource(R.drawable.chip_bg);
+        chipAll.setBackgroundResource(R.drawable.chip_bg);
+        chipFood.setBackgroundResource(R.drawable.chip_bg);
+        chipCafe.setBackgroundResource(R.drawable.chip_bg);
+        chipTea.setBackgroundResource(R.drawable.chip_bg);
+        chipStore.setBackgroundResource(R.drawable.chip_bg);
+        chipSupermarket.setBackgroundResource(R.drawable.chip_bg);
+
+        chipAll.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+        chipFood.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+        chipCafe.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+        chipTea.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+        chipStore.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+        chipSupermarket.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
 
         activeChip.setBackgroundResource(R.drawable.chip_active_bg);
-    }
-
-    private void updatePlaceInfo(String emoji, String name, String info, String route) {
-        placeEmoji.setText(emoji);
-        placeName.setText(name);
-        placeInfo.setText(info);
-        placeRoute.setText(route);
-    }
-
-    private float getMarkerColorForCategory(String category) {
-        if (category == null) return BitmapDescriptorFactory.HUE_RED;
-        switch (category.toLowerCase()) {
-            case "bún bò":
-            case "phở":
-                return BitmapDescriptorFactory.HUE_VIOLET;
-            case "nướng":
-            case "cơm":
-                return BitmapDescriptorFactory.HUE_ORANGE;
-            case "lẩu":
-                return BitmapDescriptorFactory.HUE_GREEN;
-            case "trà sữa":
-                return BitmapDescriptorFactory.HUE_YELLOW;
-            case "pizza":
-                return BitmapDescriptorFactory.HUE_RED;
-            default:
-                return BitmapDescriptorFactory.HUE_AZURE;
-        }
+        activeChip.setTextColor(Color.WHITE);
     }
 
     private String getEmojiForCategory(String category) {
         if (category == null) return "📍";
-        switch (category.toLowerCase()) {
-            case "bún bò":
-            case "phở":
+
+        switch (category) {
+            case "food":
                 return "🍜";
-            case "nướng":
-            case "cơm":
-                return "🍢";
-            case "lẩu":
-                return "🍲";
-            case "trà sữa":
+            case "cafe":
+                return "☕";
+            case "tea":
                 return "🧋";
-            case "pizza":
-                return "🍕";
+            case "store":
+                return "🏪";
+            case "supermarket":
+                return "🛒";
             default:
                 return "📍";
         }
+    }
+
+    private String getFilterName(String filter) {
+        switch (filter) {
+            case "food":
+                return "Quán ăn";
+            case "cafe":
+                return "Cafe";
+            case "tea":
+                return "Trà sữa";
+            case "store":
+                return "Cửa hàng tiện lợi";
+            case "supermarket":
+                return "Siêu thị";
+            default:
+                return "Tất cả";
+        }
+    }
+
+    private void updatePlaceInfo(String emoji, String name, String type, String distance, String openTime) {
+        placeEmoji.setText(emoji);
+        placeName.setText(name);
+        placeType.setText(type);
+        placeDistance.setText(distance);
+        placeOpenTime.setText(openTime);
     }
 
     private void setupBottomNavigation() {
@@ -368,20 +586,51 @@ public class MapActivity extends BaseActivity implements OnMapReadyCallback {
             startActivity(intent);
         });
 
-        findViewById(R.id.navMap).setOnClickListener(v -> {
-            Toast.makeText(this, getString(R.string.you_are_on_map), Toast.LENGTH_SHORT).show();
-        });
+        findViewById(R.id.navMap).setOnClickListener(v ->
+                Toast.makeText(this, "Bạn đang ở trang Bản đồ", Toast.LENGTH_SHORT).show()
+        );
 
-        findViewById(R.id.navChat).setOnClickListener(v -> {
-            startActivity(new Intent(MapActivity.this, ChatActivity.class));
-        });
+        findViewById(R.id.navChat).setOnClickListener(v ->
+                startActivity(new Intent(MapActivity.this, ChatActivity.class))
+        );
 
-        findViewById(R.id.navFavorite).setOnClickListener(v -> {
-            startActivity(new Intent(MapActivity.this, FavoriteActivity.class));
-        });
+        findViewById(R.id.navFavorite).setOnClickListener(v ->
+                startActivity(new Intent(MapActivity.this, FavoriteActivity.class))
+        );
 
-        findViewById(R.id.navProfile).setOnClickListener(v -> {
-            startActivity(new Intent(MapActivity.this, ProfileActivity.class));
-        });
+        findViewById(R.id.navProfile).setOnClickListener(v ->
+                startActivity(new Intent(MapActivity.this, ProfileActivity.class))
+        );
+    }
+
+    private static class DemoPlace {
+        String name;
+        String category;
+        String type;
+        String address;
+        String openingHours;
+        double latitude;
+        double longitude;
+        int nightScore;
+
+        DemoPlace(
+                String name,
+                String category,
+                String type,
+                String address,
+                String openingHours,
+                double latitude,
+                double longitude,
+                int nightScore
+        ) {
+            this.name = name;
+            this.category = category;
+            this.type = type;
+            this.address = address;
+            this.openingHours = openingHours;
+            this.latitude = latitude;
+            this.longitude = longitude;
+            this.nightScore = nightScore;
+        }
     }
 }
