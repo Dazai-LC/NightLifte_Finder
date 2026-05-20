@@ -40,6 +40,7 @@
 
         <!-- SEARCH -->
         <EditText
+            android:id="@+id/etHomeSearch"
             android:layout_width="0dp"
             android:layout_height="46dp"
             android:layout_weight="1"
@@ -127,6 +128,7 @@
 
                     <!-- DEAL 1 -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/dealCard1"
                         android:layout_width="175dp"
                         android:layout_height="125dp"
                         android:layout_marginEnd="12dp"
@@ -180,6 +182,7 @@
                                     android:textSize="15sp" />
 
                                 <TextView
+                                    android:id="@+id/txtCountdown1"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="⏱ Còn 02:15:30"
@@ -194,6 +197,7 @@
 
                     <!-- DEAL 2 -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/dealCard2"
                         android:layout_width="175dp"
                         android:layout_height="125dp"
                         android:layout_marginEnd="12dp"
@@ -247,6 +251,7 @@
                                     android:textSize="15sp" />
 
                                 <TextView
+                                    android:id="@+id/txtCountdown2"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="⏱ Còn 00:45:10"
@@ -261,6 +266,7 @@
 
                     <!-- DEAL 3 -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/dealCard3"
                         android:layout_width="175dp"
                         android:layout_height="125dp"
                         android:layout_marginEnd="12dp"
@@ -314,6 +320,7 @@
                                     android:textSize="15sp" />
 
                                 <TextView
+                                    android:id="@+id/txtCountdown3"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="⏱ Còn 05:00:00"
@@ -328,6 +335,7 @@
 
                     <!-- DEAL 4 -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/dealCard4"
                         android:layout_width="175dp"
                         android:layout_height="125dp"
                         android:layout_marginEnd="12dp"
@@ -381,6 +389,7 @@
                                     android:textSize="15sp" />
 
                                 <TextView
+                                    android:id="@+id/txtCountdown4"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="⏱ Còn 01:20:00"
@@ -418,6 +427,7 @@
                     android:textSize="19sp" />
 
                 <TextView
+                    android:id="@+id/btnViewAllHot"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xem tất cả"
@@ -429,6 +439,7 @@
 
             <!-- CARD LỚN 1 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardHot1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
@@ -508,6 +519,7 @@
 
             <!-- CARD LỚN 2 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardHot2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
@@ -607,6 +619,7 @@
                     android:textSize="19sp" />
 
                 <TextView
+                    android:id="@+id/btnViewMap"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xem bản đồ"
@@ -618,6 +631,7 @@
 
             <!-- NEAR 1 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNear1"
                 android:layout_width="match_parent"
                 android:layout_height="92dp"
                 android:layout_marginStart="15dp"
@@ -688,6 +702,7 @@
 
             <!-- NEAR 2 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNear2"
                 android:layout_width="match_parent"
                 android:layout_height="92dp"
                 android:layout_marginStart="15dp"
@@ -769,6 +784,7 @@
                 android:paddingBottom="10dp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAiSuggest"
                 android:layout_width="match_parent"
                 android:layout_height="110dp"
                 android:layout_marginStart="15dp"
@@ -843,6 +859,7 @@
                 android:paddingBottom="10dp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardLateNight"
                 android:layout_width="match_parent"
                 android:layout_height="110dp"
                 android:layout_marginStart="15dp"

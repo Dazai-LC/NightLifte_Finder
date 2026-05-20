@@ -105,71 +105,76 @@ public class FavoriteActivity extends BaseActivity {
     }
 
     private void prepareData() {
-        favoritePlaces.add(new Place(
-                "Bún Bò Huế 24h",
-                "🟢 Còn chỗ",
-                "#32CD32",
-                new String[]{"🍜 Bún bò", "🌶 Đậm", "🌙 Khuya"},
-                "⭐ 4.8   •   📍 1,2 km   •   ⏱ 3:00 sáng",
-                "20 %",
-                20,
-                R.drawable.burger,
-                "bunbo",
-                true
-        ));
+        favoritePlaces.clear();
 
-        favoritePlaces.add(new Place(
-                "Lẩu Thái Nửa Đêm",
-                "🔴 Đông",
-                "#FF4D5A",
-                new String[]{"🍲 Lẩu", "🔥 Nóng", "👥 Nhóm"},
-                "⭐ 4.6   •   📍 0,8 km   •   ⏱ 2:00 sáng",
-                "80 %",
-                80,
-                R.drawable.sushi,
-                "lau",
-                false
-        ));
+        com.google.firebase.auth.FirebaseUser user = new com.example.nightlife_finder.repositories.AuthRepository().getCurrentUser();
+        if (user != null) {
+            new com.example.nightlife_finder.repositories.FavoriteRepository().getFavorites(user.getUid(), new com.example.nightlife_finder.interfaces.OnPlaceLoadedListener() {
+                @Override
+                public void onSuccess(List<com.example.nightlife_finder.models.Place> places) {
+                    favoritePlaces.clear();
+                    for (com.example.nightlife_finder.models.Place p : places) {
+                        String status = "🟢 Còn chỗ";
+                        String color = "#32CD32";
+                        int crowd = 25;
+                        boolean available = true;
+                        if (p.getName().contains("Lẩu")) {
+                            status = "🔴 Đông";
+                            color = "#FF4D5A";
+                            crowd = 80;
+                            available = false;
+                        } else if (p.getName().contains("Nhậu") || p.getName().contains("bbq")) {
+                            status = "🟡 Đang đông";
+                            color = "#FFB84D";
+                            crowd = 60;
+                            available = false;
+                        }
 
-        favoritePlaces.add(new Place(
-                "Nhậu và Có BBQ",
-                "🟡 Đang đông",
-                "#FFB84D",
-                new String[]{"🍢 Nhậu", "🥩 BBQ", "🎵 Ổn"},
-                "⭐ 4.5   •   📍 2,1 km   •   ⏱ 0:30 sáng",
-                "60 %",
-                60,
-                R.drawable.bar,
-                "bbq",
-                false
-        ));
+                        String[] tags = new String[]{p.getCategory(), "⭐ 4.7", "🌙 Khuya"};
 
-        favoritePlaces.add(new Place(
-                "Chè Khuya Hoàn Kiếm",
-                "🟢 Còn chỗ",
-                "#32CD32",
-                new String[]{"🍧 Chè", "🍓 Ngọt", "🌙 Thư giãn"},
-                "⭐ 4.7   •   📍 1,5 km   •   ⏱ 1:00 sáng",
-                "35 %",
-                35,
-                R.drawable.diner,
-                "che",
-                true
-        ));
+                        int imgRes = R.drawable.bar;
+                        String chId = "bunbo";
+                        if ("bunbo".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.burger;
+                            chId = "bunbo";
+                        } else if ("lau".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.sushi;
+                            chId = "lau";
+                        } else if ("bbq".equals(p.getImageUrl()) || "bar".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.bar;
+                            chId = "bbq";
+                        } else if ("pizza".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.pizza;
+                            chId = "pizza";
+                        } else if ("che".equals(p.getImageUrl()) || "diner".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.diner;
+                            chId = "che";
+                        }
 
-        favoritePlaces.add(new Place(
-                "Pizza Midnight",
-                "🟢 Còn chỗ",
-                "#32CD32",
-                new String[]{"🍕 Pizza", "🎁 Ưu đãi", "🚀 Nhanh"},
-                "⭐ 4.7   •   📍 1,4 km   •   ⏱ 4:00 sáng",
-                "40 %",
-                40,
-                R.drawable.pizza,
-                "pizza",
-                true
-        ));
+                        favoritePlaces.add(new Place(
+                                p.getName(),
+                                status,
+                                color,
+                                tags,
+                                "⭐ 4.8   •   📍 1.2 km   •   ⏱ " + p.getOpenTime(),
+                                crowd + " %",
+                                crowd,
+                                imgRes,
+                                chId,
+                                available
+                        ));
+                    }
+                    renderFavorites();
+                }
 
+                @Override
+                public void onError(String error) {
+                    Toast.makeText(FavoriteActivity.this, "Lỗi tải yêu thích: " + error, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        historyPlaces.clear();
         historyPlaces.add(new Place(
                 "Phở Gà Đêm Hàng Bạc",
                 "Đã đi hôm qua • 23:10",

@@ -166,7 +166,12 @@ public class ProfileActivity extends BaseActivity {
         });
 
         findViewById(R.id.rowLogout).setOnClickListener(v -> {
-            Toast.makeText(this, "Demo đăng xuất tài khoản", Toast.LENGTH_SHORT).show();
+            new com.example.nightlife_finder.repositories.AuthRepository().logout();
+            Toast.makeText(this, "Đã đăng xuất thành công!", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 
