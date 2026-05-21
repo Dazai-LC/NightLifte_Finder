@@ -1,0 +1,92 @@
+<resources>
+    <string name="app_name">NightLife Finder</string>
+
+    <!-- Logo / Common -->
+    <string name="logo_text">N</string>
+    <string name="cancel">Hủy</string>
+    <string name="save">Lưu</string>
+    <string name="delete">Xóa</string>
+    <string name="view_all">Xem tất cả</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_map">Bản đồ</string>
+    <string name="nav_chat">Trò chuyện</string>
+    <string name="nav_favorite">Yêu thích</string>
+    <string name="nav_profile">Hồ sơ</string>
+
+    <!-- Home -->
+    <string name="search_food_hint">Tìm món ăn đêm...</string>
+    <string name="flash_deals">Ưu đãi chớp nhoáng</string>
+    <string name="hot_this_week">Nổi bật tuần này</string>
+    <string name="near_you">Gần bạn</string>
+
+    <!-- Map -->
+    <string name="search_map_hint">Tìm quán ăn đêm ở Hà Nội...</string>
+    <string name="bun_bo">Bún bò</string>
+    <string name="grill">Nướng</string>
+    <string name="hotpot">Lẩu</string>
+    <string name="milk_tea">Trà sữa</string>
+    <string name="pizza">Pizza</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Tin nhắn</string>
+    <string name="new_chat_title">Tin nhắn mới</string>
+    <string name="search_chat_hint">Tìm cuộc trò chuyện...</string>
+    <string name="search_new_chat_hint">Tìm tên quán để nhắn...</string>
+    <string name="all">Tất cả</string>
+    <string name="unread">Chưa đọc</string>
+    <string name="message">Nhắn</string>
+    <string name="message_input_hint">Nhắn tin cho quán...</string>
+
+    <!-- Favorite -->
+    <string name="favorite_title">Địa điểm yêu thích</string>
+    <string name="favorite_subtitle">12 địa điểm đã lưu</string>
+    <string name="recent_saved">ĐÃ LƯU GẦN ĐÂY</string>
+    <string name="history">Lịch sử</string>
+    <string name="visited_places">QUÁN ĐÃ TỪNG ĐI</string>
+    <string name="direction">Chỉ đường</string>
+    <string name="chat_box">Hộp thoại</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Hồ sơ</string>
+    <string name="profile_name">Nguyễn Minh Tuấn</string>
+    <string name="profile_location">Hà Nội, Việt Nam</string>
+    <string name="profile_points">48 Điểm</string>
+    <string name="profile_favorites">12 Yêu thích</string>
+    <string name="profile_reviews">7 Đánh giá</string>
+    <string name="edit_profile">Chỉnh sửa hồ sơ</string>
+
+    <string name="notification">Thông báo</string>
+    <string name="voucher">Voucher</string>
+    <string name="support">Hỗ trợ</string>
+
+    <string name="section_account">TÀI KHOẢN</string>
+    <string name="my_address">Địa chỉ của tôi</string>
+    <string name="change_password">Đổi mật khẩu</string>
+    <string name="social_link">Liên kết mạng xã hội</string>
+
+    <string name="section_settings">CÀI ĐẶT</string>
+    <string name="dark_mode">Chế độ tối</string>
+    <string name="language">Ngôn ngữ</string>
+    <string name="language_vi">Tiếng Việt</string>
+    <string name="language_en">Tiếng Anh</string>
+    <string name="vietnamese">Tiếng Việt</string>
+    <string name="english">Tiếng Anh</string>
+
+    <string name="section_other">KHÁC</string>
+    <string name="help_center">Trung tâm hỗ trợ</string>
+    <string name="rate_app">Đánh giá ứng dụng</string>
+    <string name="logout">Đăng xuất</string>
+
+    <!-- Avatar -->
+    <string name="choose_avatar">Chọn ảnh đại diện</string>
+    <string name="drag_zoom_avatar">Kéo / phóng to ảnh để lấy đúng khuôn mặt</string>
+
+    <!-- Toast -->
+    <string name="you_are_on_home">Bạn đang ở Trang chủ</string>
+    <string name="you_are_on_map">Bạn đang ở trang Bản đồ</string>
+    <string name="you_are_on_chat">Bạn đang ở trang Trò chuyện</string>
+    <string name="you_are_on_favorite">Bạn đang ở trang Yêu thích</string>
+    <string name="you_are_on_profile">Bạn đang ở trang Hồ sơ</string>
+</resources>

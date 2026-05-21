@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="app_bg">#0F0F12</color>
+    <color name="surface_bg">#1A1A1F</color>
+    <color name="surface_bg_2">#252532</color>
+
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#9CA0AA</color>
+    <color name="divider_color">#292932</color>
+
+    <color name="primary_color">#A020F0</color>
+    <color name="nav_inactive">#8A8A95</color>
+    <color name="bottom_nav_bg">#1A1A1F</color>
+
+    <color name="danger_color">#FF4D5A</color>
+    <color name="success_color">#32CD32</color>
+
+    <color name="profile_header_start">#2B0F68</color>
+    <color name="profile_header_center">#13131C</color>
+    <color name="profile_header_end">#0F0F12</color>
+
+</resources>

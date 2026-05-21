@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "2206654109",
+    "project_id": "nightlife-finder-b7a6a",
+    "storage_bucket": "nightlife-finder-b7a6a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:2206654109:android:240d95f29dc51727013e74",
+        "android_client_info": {
+          "package_name": "com.example.nightlife_finder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcE_0i2NfqxtC-v-i4Gpz6pdclk_-xXNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
