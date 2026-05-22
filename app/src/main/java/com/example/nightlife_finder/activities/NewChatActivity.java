@@ -17,6 +17,11 @@ public class NewChatActivity extends BaseActivity {
 
     private EditText searchShopInput;
     private EditText firstMessageInput;
+    private EditText shopAvatarInput;
+    private EditText shopCategoryInput;
+    private EditText shopAddressInput;
+    private EditText shopOpenTimeInput;
+    private EditText shopCloseTimeInput;
 
     private ChatRepository chatRepository;
 
@@ -39,8 +44,13 @@ public class NewChatActivity extends BaseActivity {
     }
 
     private void bindViews() {
-        searchShopInput = findViewById(R.id.searchShopInput);
+        searchShopInput   = findViewById(R.id.searchShopInput);
         firstMessageInput = findViewById(R.id.firstMessageInput);
+        shopAvatarInput   = findViewById(R.id.shopAvatarInput);
+        shopCategoryInput = findViewById(R.id.shopCategoryInput);
+        shopAddressInput  = findViewById(R.id.shopAddressInput);
+        shopOpenTimeInput = findViewById(R.id.shopOpenTimeInput);
+        shopCloseTimeInput = findViewById(R.id.shopCloseTimeInput);
     }
 
     private void setupButtons() {
@@ -68,34 +78,63 @@ public class NewChatActivity extends BaseActivity {
             return;
         }
 
-        String title = searchShopInput.getText().toString().trim();
-        if (TextUtils.isEmpty(title)) {
-            searchShopInput.setError("Vui lòng nhập tiêu đề");
-            searchShopInput.requestFocus();
+        // Tin nhắn đầu tiên – bắt buộc
+        String firstMsg = getText(firstMessageInput);
+        if (TextUtils.isEmpty(firstMsg)) {
+            Toast.makeText(this, "Vui lòng nhập tin nhắn đầu tiên", Toast.LENGTH_SHORT).show();
+            if (firstMessageInput != null) firstMessageInput.requestFocus();
             return;
         }
 
-        String firstMsg = firstMessageInput != null
-                ? firstMessageInput.getText().toString().trim()
-                : "";
+        // Tên quán / tiêu đề – dùng default nếu rỗng
+        String title = getText(searchShopInput);
+        if (TextUtils.isEmpty(title)) title = "Cuộc trò chuyện mới";
 
-        String uid = currentUser.getUid();
+        // Các field tùy chọn – dùng default nếu rỗng
+        String avatarText = getText(shopAvatarInput);
+        if (TextUtils.isEmpty(avatarText)) avatarText = "💬";
+
+        String category = getText(shopCategoryInput);
+        if (TextUtils.isEmpty(category)) category = "general";
+
+        String address = getText(shopAddressInput);
+        if (TextUtils.isEmpty(address)) address = "Chưa có địa chỉ";
+
+        String openTime = getText(shopOpenTimeInput);
+        if (TextUtils.isEmpty(openTime)) openTime = "18:00";
+
+        String closeTime = getText(shopCloseTimeInput);
+        if (TextUtils.isEmpty(closeTime)) closeTime = "02:30";
+
+        // Lấy shopName = title nếu không có field riêng
+        final String shopName = title;
+
+        String uid   = currentUser.getUid();
         String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
 
         Toast.makeText(this, "Đang tạo cuộc trò chuyện...", Toast.LENGTH_SHORT).show();
 
-        chatRepository.createConversation(title, uid, email, firstMsg, new OnChatActionListener() {
-            @Override
-            public void onSuccess(String conversationId) {
-                openConversation(conversationId);
-            }
+        chatRepository.createConversation(
+                title, uid, email, firstMsg,
+                shopName, avatarText, category, address, openTime, closeTime,
+                new OnChatActionListener() {
+                    @Override
+                    public void onSuccess(String conversationId) {
+                        openConversation(conversationId);
+                    }
 
-            @Override
-            public void onError(String error) {
-                Toast.makeText(NewChatActivity.this,
-                        "Lỗi tạo cuộc trò chuyện: " + error, Toast.LENGTH_LONG).show();
-            }
-        });
+                    @Override
+                    public void onError(String error) {
+                        Toast.makeText(NewChatActivity.this,
+                                "Lỗi tạo cuộc trò chuyện: " + error, Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    /** Lấy text đã trim từ EditText, trả về "" nếu null */
+    private String getText(EditText et) {
+        if (et == null) return "";
+        return et.getText().toString().trim();
     }
 
     // -------------------------------------------------------

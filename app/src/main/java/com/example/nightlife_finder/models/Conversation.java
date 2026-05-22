@@ -14,6 +14,17 @@ public class Conversation {
     private long createdAt;
     private long lastMessageAt;
 
+    // Thông tin quán (thêm từ lần 2)
+    private String shopName;
+    private String shopAvatarText;
+    private String shopCategory;
+    private String address;
+    private String openTime;
+    private String closeTime;
+
+    // Trạng thái đọc (false = chưa đọc; old docs không có field → Firebase default false)
+    private boolean isRead;
+
     // Firebase yêu cầu constructor rỗng
     public Conversation() {
     }
@@ -49,4 +60,25 @@ public class Conversation {
 
     public long getLastMessageAt() { return lastMessageAt; }
     public void setLastMessageAt(long lastMessageAt) { this.lastMessageAt = lastMessageAt; }
+
+    public String getShopName() { return shopName; }
+    public void setShopName(String shopName) { this.shopName = shopName; }
+
+    public String getShopAvatarText() { return shopAvatarText; }
+    public void setShopAvatarText(String shopAvatarText) { this.shopAvatarText = shopAvatarText; }
+
+    public String getShopCategory() { return shopCategory; }
+    public void setShopCategory(String shopCategory) { this.shopCategory = shopCategory; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public String getOpenTime() { return openTime; }
+    public void setOpenTime(String openTime) { this.openTime = openTime; }
+
+    public String getCloseTime() { return closeTime; }
+    public void setCloseTime(String closeTime) { this.closeTime = closeTime; }
+
+    public boolean isRead() { return isRead; }
+    public void setRead(boolean read) { isRead = read; }
 }

@@ -23,6 +23,7 @@ import java.util.Map;
  * Schema:
  *   conversations/{conversationId}
  *       id, title, createdBy, createdByEmail, lastMessage, createdAt, lastMessageAt
+ *       shopName, shopAvatarText, shopCategory, address, openTime, closeTime
  *
  *   conversations/{conversationId}/messages/{messageId}
  *       id, conversationId, senderId, senderEmail, text, createdAt
@@ -42,6 +43,12 @@ public class ChatRepository {
                                    String uid,
                                    String email,
                                    String firstMessageText,
+                                   String shopName,
+                                   String shopAvatarText,
+                                   String shopCategory,
+                                   String address,
+                                   String openTime,
+                                   String closeTime,
                                    OnChatActionListener listener) {
 
         long now = System.currentTimeMillis();
@@ -62,6 +69,13 @@ public class ChatRepository {
         convData.put("lastMessage", firstMessageText.isEmpty() ? "" : firstMessageText);
         convData.put("createdAt", now);
         convData.put("lastMessageAt", now);
+        convData.put("shopName", shopName);
+        convData.put("shopAvatarText", shopAvatarText);
+        convData.put("shopCategory", shopCategory);
+        convData.put("address", address);
+        convData.put("openTime", openTime);
+        convData.put("closeTime", closeTime);
+        convData.put("isRead", false);  // mới tạo → chưa đọc
 
         convRef.set(convData)
                 .addOnSuccessListener(unused -> {
@@ -84,6 +98,18 @@ public class ChatRepository {
                     });
                 })
                 .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    /**
+     * Overload tương thích ngược (không có shop fields).
+     */
+    public void createConversation(String title,
+                                   String uid,
+                                   String email,
+                                   String firstMessageText,
+                                   OnChatActionListener listener) {
+        createConversation(title, uid, email, firstMessageText,
+                title, "💬", "general", "Chưa có địa chỉ", "18:00", "02:30", listener);
     }
 
     // -------------------------------------------------------
@@ -141,12 +167,83 @@ public class ChatRepository {
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Conversation conv = doc.toObject(Conversation.class);
                         if (conv != null) {
+                            // Firebase dùng Java Bean convention: getter isRead() → field "read"
+                            // nên toObject() không map đúng field "isRead" → đọc thủ công
+                            Boolean readValue = doc.getBoolean("isRead");
+                            conv.setRead(readValue != null && readValue);
                             list.add(conv);
                         }
                     }
                     listener.onSuccess(list);
                 })
                 .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    // -------------------------------------------------------
+    // Xóa conversation: xóa messages subcollection trước, rồi xóa document
+    // -------------------------------------------------------
+    public void deleteConversation(String conversationId, OnChatActionListener listener) {
+        // Bước 1: lấy tất cả messages
+        db.collection(FirebaseConstants.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .collection(FirebaseConstants.COLLECTION_MESSAGES)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    // Bước 2: xóa từng message document
+                    if (querySnapshot.isEmpty()) {
+                        // Không có messages, xóa thẳng conversation
+                        deleteConversationDocument(conversationId, listener);
+                        return;
+                    }
+
+                    final int[] remaining = {querySnapshot.size()};
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        doc.getReference().delete()
+                                .addOnCompleteListener(task -> {
+                                    remaining[0]--;
+                                    if (remaining[0] == 0) {
+                                        // Xóa xong tất cả messages → xóa conversation
+                                        deleteConversationDocument(conversationId, listener);
+                                    }
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Nếu lấy messages lỗi, vẫn thử xóa conversation
+                    deleteConversationDocument(conversationId, listener);
+                });
+    }
+
+    private void deleteConversationDocument(String conversationId, OnChatActionListener listener) {
+        db.collection(FirebaseConstants.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .delete()
+                .addOnSuccessListener(unused -> listener.onSuccess(conversationId))
+                .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    // -------------------------------------------------------
+    // Cập nhật conversation (chỉ update các field cho phép sửa)
+    // -------------------------------------------------------
+    public void updateConversation(String conversationId, Map<String, Object> updates,
+                                   OnChatActionListener listener) {
+        db.collection(FirebaseConstants.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .update(updates)
+                .addOnSuccessListener(unused -> listener.onSuccess(conversationId))
+                .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    // -------------------------------------------------------
+    // Đánh dấu conversation đã đọc
+    // -------------------------------------------------------
+    public void markAsRead(String conversationId) {
+        Map<String, Object> update = new HashMap<>();
+        update.put("isRead", true);
+        db.collection(FirebaseConstants.COLLECTION_CONVERSATIONS)
+                .document(conversationId)
+                .update(update);
+        // Không cần callback — fire-and-forget
     }
 
     // -------------------------------------------------------
