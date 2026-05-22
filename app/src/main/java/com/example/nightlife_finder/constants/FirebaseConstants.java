@@ -11,8 +11,10 @@ public class FirebaseConstants {
     // -------------------------------------------------------
     // Tên Collection trong Firestore
     // -------------------------------------------------------
-    public static final String COLLECTION_USERS  = "users";
-    public static final String COLLECTION_PLACES = "places";
+    public static final String COLLECTION_USERS         = "users";
+    public static final String COLLECTION_PLACES        = "places";
+    public static final String COLLECTION_CONVERSATIONS = "conversations";
+    public static final String COLLECTION_MESSAGES      = "messages";
 
     // -------------------------------------------------------
     // Tên Field trong Collection USERS
