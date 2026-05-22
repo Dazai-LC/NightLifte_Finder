@@ -326,8 +326,13 @@
             android:textSize="13sp"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:singleLine="true"
-            android:inputType="text" />
+            android:inputType="text"
+            android:maxLines="1"
+            android:imeOptions="actionSend"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:enabled="true"
+            android:cursorVisible="true" />
 
         <TextView
             android:id="@+id/btnSendMessage"

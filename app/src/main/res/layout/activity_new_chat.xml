@@ -57,8 +57,13 @@
         android:textSize="14sp"
         android:paddingStart="18dp"
         android:paddingEnd="18dp"
-        android:singleLine="true"
         android:inputType="text"
+        android:maxLines="1"
+        android:imeOptions="actionSearch"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:enabled="true"
+        android:cursorVisible="true"
         android:autofillHints="search" />
 
     <!-- GỢI Ý -->
