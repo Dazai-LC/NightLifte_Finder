@@ -5,6 +5,9 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -215,13 +218,33 @@ public class MainActivity extends BaseActivity {
     }
 
     // -------------------------------------------------------
-    // Search bar interaction
+    // Search bar → mở SearchResultsActivity
     // -------------------------------------------------------
     private void setupSearchBar() {
-        if (findViewById(R.id.etHomeSearch) != null) {
-            findViewById(R.id.etHomeSearch).setOnClickListener(v ->
-                    Toast.makeText(this, "Nhập tên món hoặc quán để tìm kiếm...", Toast.LENGTH_SHORT).show());
-        }
+        EditText et = findViewById(R.id.etHomeSearch);
+        if (et == null) return;
+
+        // Bấm Enter / nút Search trên keyboard
+        et.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH
+                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                openSearchResults(et.getText().toString().trim());
+                return true;
+            }
+            return false;
+        });
+
+        // Bấm vào ô tìm kiếm cũng mở luôn (UX nhanh)
+        et.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) openSearchResults(et.getText().toString().trim());
+        });
+    }
+
+    /** Mở SearchResultsActivity với query (có thể rỗng) */
+    private void openSearchResults(String query) {
+        Intent intent = new Intent(MainActivity.this, SearchResultsActivity.class);
+        intent.putExtra(SearchResultsActivity.EXTRA_SEARCH_QUERY, query);
+        startActivity(intent);
     }
 
     // -------------------------------------------------------
