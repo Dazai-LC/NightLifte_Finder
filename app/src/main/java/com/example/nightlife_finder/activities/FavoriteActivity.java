@@ -1,8 +1,10 @@
 package com.example.nightlife_finder.activities;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -14,13 +16,19 @@ import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.nightlife_finder.R;
+import com.example.nightlife_finder.constants.FirebaseConstants;
+import com.example.nightlife_finder.firebase.FirebaseManager;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FavoriteActivity extends BaseActivity {
 
@@ -36,7 +44,9 @@ public class FavoriteActivity extends BaseActivity {
     private LinearLayout historyList;
 
     private boolean compactMode = false;
-    private int filterMode = 0;
+    /** Category filter: rỗng = tất cả, không rỗng = lọc theo category đó */
+    private String currentFilter = "";
+    private TextView btnFilter; // giữ ref để cập nhật text
 
     private final List<Place> favoritePlaces = new ArrayList<>();
     private final List<Place> historyPlaces = new ArrayList<>();
@@ -50,12 +60,21 @@ public class FavoriteActivity extends BaseActivity {
         String crowdText;
         int crowd;
         int imageRes;
-        String chatId;
         boolean available;
+        // Dữ liệu place thật từ Firestore
+        String placeId;
+        String category;
+        String address;
+        String openTime;
+        String imageUrl;
+        Double lat;
+        Double lng;
 
         Place(String title, String status, String statusColor, String[] tags,
               String meta, String crowdText, int crowd, int imageRes,
-              String chatId, boolean available) {
+              boolean available,
+              String placeId, String category, String address, String openTime,
+              String imageUrl, Double lat, Double lng) {
             this.title = title;
             this.status = status;
             this.statusColor = statusColor;
@@ -64,8 +83,14 @@ public class FavoriteActivity extends BaseActivity {
             this.crowdText = crowdText;
             this.crowd = crowd;
             this.imageRes = imageRes;
-            this.chatId = chatId;
             this.available = available;
+            this.placeId = placeId;
+            this.category = category;
+            this.address = address;
+            this.openTime = openTime;
+            this.imageUrl = imageUrl;
+            this.lat = lat;
+            this.lng = lng;
         }
     }
 
@@ -83,7 +108,7 @@ public class FavoriteActivity extends BaseActivity {
         setupBottomNavigation();
 
         renderFavorites();
-        renderHistory();
+        // History chỉ load khi người dùng bấm tab
     }
 
     private void setupSystemBars() {
@@ -96,6 +121,7 @@ public class FavoriteActivity extends BaseActivity {
         tabHistory = findViewById(R.id.tabHistory);
         txtFavoriteSubtitle = findViewById(R.id.txtFavoriteSubtitle);
         btnViewMode = findViewById(R.id.btnViewMode);
+        btnFilter = findViewById(R.id.btnFilterFavorites);
 
         favoriteScroll = findViewById(R.id.favoriteScroll);
         historyScroll = findViewById(R.id.historyScroll);
@@ -133,22 +159,16 @@ public class FavoriteActivity extends BaseActivity {
                         String[] tags = new String[]{p.getCategory(), "⭐ 4.7", "🌙 Khuya"};
 
                         int imgRes = R.drawable.bar;
-                        String chId = "bunbo";
                         if ("bunbo".equals(p.getImageUrl())) {
                             imgRes = R.drawable.burger;
-                            chId = "bunbo";
                         } else if ("lau".equals(p.getImageUrl())) {
                             imgRes = R.drawable.sushi;
-                            chId = "lau";
-                        } else if ("bbq".equals(p.getImageUrl()) || "bar".equals(p.getImageUrl())) {
-                            imgRes = R.drawable.bar;
-                            chId = "bbq";
                         } else if ("pizza".equals(p.getImageUrl())) {
                             imgRes = R.drawable.pizza;
-                            chId = "pizza";
-                        } else if ("che".equals(p.getImageUrl()) || "diner".equals(p.getImageUrl())) {
+                        } else if ("diner".equals(p.getImageUrl())) {
                             imgRes = R.drawable.diner;
-                            chId = "che";
+                        } else if ("bbq".equals(p.getImageUrl()) || "bar".equals(p.getImageUrl())) {
+                            imgRes = R.drawable.bar;
                         }
 
                         favoritePlaces.add(new Place(
@@ -160,8 +180,14 @@ public class FavoriteActivity extends BaseActivity {
                                 crowd + " %",
                                 crowd,
                                 imgRes,
-                                chId,
-                                available
+                                available,
+                                p.getId(),
+                                p.getCategory(),
+                                p.getAddress(),
+                                p.getOpenTime(),
+                                p.getImageUrl(),
+                                p.getLat(),
+                                p.getLng()
                         ));
                     }
                     renderFavorites();
@@ -174,45 +200,8 @@ public class FavoriteActivity extends BaseActivity {
             });
         }
 
+        // Không còn hardcode history – load từ SharedPreferences khi cần
         historyPlaces.clear();
-        historyPlaces.add(new Place(
-                "Phở Gà Đêm Hàng Bạc",
-                "Đã đi hôm qua • 23:10",
-                "#9CA0AA",
-                new String[]{"🍜 Phở", "⭐ 4.7"},
-                "Bạn đánh giá: ⭐ 4.7",
-                "",
-                0,
-                R.drawable.diner,
-                "bunbo",
-                true
-        ));
-
-        historyPlaces.add(new Place(
-                "Trà sữa 24h Phố Cổ",
-                "Đã đi 2 ngày trước • 00:25",
-                "#9CA0AA",
-                new String[]{"🧋 Trà sữa", "⭐ 4.5"},
-                "Bạn đánh giá: ⭐ 4.5",
-                "",
-                0,
-                R.drawable.sushi,
-                "che",
-                true
-        ));
-
-        historyPlaces.add(new Place(
-                "Cơm Tấm Đêm Hà Nội",
-                "Đã đi tuần trước • 22:40",
-                "#9CA0AA",
-                new String[]{"🍚 Cơm", "⭐ 4.3"},
-                "Bạn đánh giá: ⭐ 4.3",
-                "",
-                0,
-                R.drawable.bar,
-                "bbq",
-                true
-        ));
     }
 
     private void setupTabs() {
@@ -243,58 +232,75 @@ public class FavoriteActivity extends BaseActivity {
         tabFavorite.setBackgroundResource(0);
         tabHistory.setBackgroundResource(R.drawable.favorite_tab_active_bg);
 
-        txtFavoriteSubtitle.setText("3 quán đã từng đi");
+        // Load history từ SharedPreferences mỗi lần mở tab
+        loadHistoryFromPrefs();
     }
 
     private void setupTopButtons() {
-        findViewById(R.id.btnFilterFavorites).setOnClickListener(v -> {
-            filterMode++;
+        // Nút lọc – hiển thị AlertDialog chọn category
+        if (btnFilter != null) {
+            btnFilter.setOnClickListener(v -> showFilterDialog());
+        }
 
-            if (filterMode > 2) {
-                filterMode = 0;
-            }
+        // Nút toggle card / danh sách gọn
+        if (btnViewMode != null) {
+            btnViewMode.setText("⊞");
+            btnViewMode.setOnClickListener(v -> {
+                compactMode = !compactMode;
+                if (compactMode) {
+                    btnViewMode.setText("☰");
+                    Toast.makeText(this, "Chế độ: Danh sách gọn", Toast.LENGTH_SHORT).show();
+                } else {
+                    btnViewMode.setText("⊞");
+                    Toast.makeText(this, "Chế độ: Thẻ lớn", Toast.LENGTH_SHORT).show();
+                }
+                renderFavorites();
+                renderHistory();
+            });
+        }
+    }
 
-            if (filterMode == 0) {
-                Toast.makeText(this, "Lọc: Tất cả địa điểm", Toast.LENGTH_SHORT).show();
-            } else if (filterMode == 1) {
-                Toast.makeText(this, "Lọc: Quán còn chỗ", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Lọc: Quán đông / sắp đóng", Toast.LENGTH_SHORT).show();
-            }
-
-            renderFavorites();
-        });
-
-        btnViewMode.setOnClickListener(v -> {
-            compactMode = !compactMode;
-
-            if (compactMode) {
-                btnViewMode.setText("▤");
-                Toast.makeText(this, "Hiển thị dạng danh sách gọn", Toast.LENGTH_SHORT).show();
-            } else {
-                btnViewMode.setText("▦");
-                Toast.makeText(this, "Hiển thị dạng thẻ lớn", Toast.LENGTH_SHORT).show();
-            }
-
-            renderFavorites();
-            renderHistory();
-        });
+    // -------------------------------------------------------
+    // Dialog chọn bộ lọc category
+    // -------------------------------------------------------
+    private void showFilterDialog() {
+        final String[] labels = {
+                "Tất cả", "Bún bò", "Lẩu", "Pizza", "Trà sữa", "Nướng", "Cơm", "Phở"
+        };
+        final String[] values = {
+                "", "Bún bò", "Lẩu", "Pizza", "Trà sữa", "Nướng", "Cơm", "Phở"
+        };
+        int currentIndex = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equals(currentFilter)) { currentIndex = i; break; }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Lọc theo loại đồ ăn")
+                .setSingleChoiceItems(labels, currentIndex, (dialog, which) -> {
+                    currentFilter = values[which];
+                    if (btnFilter != null) {
+                        btnFilter.setText(currentFilter.isEmpty() ? "🔽 Lọc" : "🔽 " + currentFilter);
+                    }
+                    dialog.dismiss();
+                    renderFavorites();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
     private void renderFavorites() {
         favoriteList.removeAllViews();
 
-        addSectionHeader(favoriteList, "ĐÃ LƯU GẦN ĐÂY", "Xem cả");
+        String header = currentFilter.isEmpty() ? "ĐÃ LƯU GẦN ĐÂY" : "ĐÃ LƯU – " + currentFilter.toUpperCase();
+        addSectionHeader(favoriteList, header, "Xem cả");
 
         int count = 0;
 
         for (Place place : favoritePlaces) {
-            if (filterMode == 1 && !place.available) {
-                continue;
-            }
-
-            if (filterMode == 2 && place.available) {
-                continue;
+            // Lọc theo category nếu đã chọn filter
+            if (!currentFilter.isEmpty()) {
+                String cat = place.category != null ? place.category : "";
+                if (!cat.equalsIgnoreCase(currentFilter)) continue;
             }
 
             favoriteList.addView(createFavoriteCard(place));
@@ -302,17 +308,91 @@ public class FavoriteActivity extends BaseActivity {
         }
 
         if (count == 0) {
-            addEmptyText(favoriteList, "Không có địa điểm phù hợp bộ lọc.");
+            if (favoritePlaces.isEmpty()) {
+                addEmptyText(favoriteList, "👋 Chưa có địa điểm yêu thích nào.\nHãy bấm ♥ trên trang chi tiết quán!");
+            } else {
+                addEmptyText(favoriteList, "🔍 Không có địa điểm nào thuộc loại \"" + currentFilter + "\".");
+            }
         }
+
+        // Cập nhật subtitle
+        txtFavoriteSubtitle.setText(favoritePlaces.size() + " địa điểm đã lưu");
     }
 
     private void renderHistory() {
         historyList.removeAllViews();
+        addSectionHeader(historyList, "MỚN GẦN ĐÂY", "");
 
-        addSectionHeader(historyList, "QUÁN ĐÃ TỪNG ĐI", "");
+        if (historyPlaces.isEmpty()) {
+            addEmptyText(historyList,
+                    "📍 Lịch sử xem địa điểm sẽ được ghi nhận\nkhi bạn mở trang chi tiết quán.");
+            txtFavoriteSubtitle.setText("Chưa có lịch sử");
+            return;
+        }
 
         for (Place place : historyPlaces) {
             historyList.addView(createHistoryCard(place));
+        }
+        txtFavoriteSubtitle.setText(historyPlaces.size() + " quán đã xem gần đây");
+    }
+
+    // -------------------------------------------------------
+    // Load lịch sử từ SharedPreferences và query Firestore
+    // -------------------------------------------------------
+    private void loadHistoryFromPrefs() {
+        historyPlaces.clear();
+        renderHistory(); // hiển empty state trước
+
+        SharedPreferences prefs = getSharedPreferences("nightlife_history", MODE_PRIVATE);
+        Set<String> recentIds = prefs.getStringSet("recent_place_ids", new java.util.HashSet<>());
+
+        if (recentIds == null || recentIds.isEmpty()) {
+            txtFavoriteSubtitle.setText("Chưa có lịch sử");
+            return;
+        }
+
+        // Load từng place từ Firestore
+        com.google.firebase.firestore.FirebaseFirestore db = FirebaseManager.getInstance().getFirestore();
+        final int total = recentIds.size();
+        final int[] loaded = {0};
+
+        for (String pid : recentIds) {
+            db.collection(FirebaseConstants.COLLECTION_PLACES)
+                    .document(pid)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        loaded[0]++;
+                        if (doc.exists()) {
+                            com.example.nightlife_finder.models.Place p = doc.toObject(com.example.nightlife_finder.models.Place.class);
+                            if (p != null) {
+                                if (p.getId() == null || p.getId().isEmpty()) p.setId(doc.getId());
+
+                                int imgRes = R.drawable.bar;
+                                if ("bunbo".equals(p.getImageUrl()))      imgRes = R.drawable.burger;
+                                else if ("lau".equals(p.getImageUrl()))  imgRes = R.drawable.sushi;
+                                else if ("pizza".equals(p.getImageUrl())) imgRes = R.drawable.pizza;
+                                else if ("diner".equals(p.getImageUrl())) imgRes = R.drawable.diner;
+
+                                historyPlaces.add(new Place(
+                                        p.getName(),
+                                        p.getCategory() != null ? p.getCategory() : "",
+                                        "#9CA0AA",
+                                        new String[]{p.getCategory() != null ? p.getCategory() : ""},
+                                        p.getAddress() != null ? p.getAddress() : "",
+                                        "", 0, imgRes, true,
+                                        p.getId(), p.getCategory(), p.getAddress(),
+                                        p.getOpenTime(), p.getImageUrl(), p.getLat(), p.getLng()
+                                ));
+                            }
+                        }
+                        if (loaded[0] >= total) {
+                            renderHistory();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        loaded[0]++;
+                        if (loaded[0] >= total) renderHistory();
+                    });
         }
     }
 
@@ -515,10 +595,10 @@ public class FavoriteActivity extends BaseActivity {
         content.addView(buttonRow, buttonRowParams);
 
         TextView directionBtn = createOutlineButton("⌖  Chỉ đường");
-        directionBtn.setOnClickListener(v -> startActivity(new Intent(FavoriteActivity.this, MapActivity.class)));
+        directionBtn.setOnClickListener(v -> openDirections(place));
 
         TextView chatBtn = createFilledButton("▱  Hộp thoại");
-        chatBtn.setOnClickListener(v -> openChatDetail(place.chatId));
+        chatBtn.setOnClickListener(v -> openNewChatForPlace(place));
 
         buttonRow.addView(directionBtn, new LinearLayout.LayoutParams(0, dp(42), 1));
 
@@ -585,7 +665,7 @@ public class FavoriteActivity extends BaseActivity {
         info.addView(meta);
 
         TextView chat = createFilledButton("Nhắn");
-        chat.setOnClickListener(v -> openChatDetail(place.chatId));
+        chat.setOnClickListener(v -> openNewChatForPlace(place));
         row.addView(chat, new LinearLayout.LayoutParams(dp(72), dp(36)));
 
         return card;
@@ -637,9 +717,44 @@ public class FavoriteActivity extends BaseActivity {
         return Color.parseColor("#FF4D5A");
     }
 
-    private void openChatDetail(String chatId) {
-        Intent intent = new Intent(FavoriteActivity.this, ChatDetailActivity.class);
-        intent.putExtra("CHAT_ID", chatId);
+    // -------------------------------------------------------
+    // Mở Google Maps Intent để chỉ đường đến place
+    // -------------------------------------------------------
+    private void openDirections(Place place) {
+        if (place.lat == null || place.lng == null || (place.lat == 0 && place.lng == 0)) {
+            // Không có tọa độ – fallback tìm kiếm theo địa chỉ
+            String query = place.address != null ? place.address : place.title;
+            Uri browserUri = Uri.parse("https://maps.google.com/?q=" + Uri.encode(query));
+            startActivity(new Intent(Intent.ACTION_VIEW, browserUri));
+            return;
+        }
+        double lat = place.lat;
+        double lng = place.lng;
+        String label = Uri.encode(place.title != null ? place.title : "Địa điểm");
+        Uri gmmUri = Uri.parse("geo:" + lat + "," + lng + "?q=" + lat + "," + lng + "(" + label + ")");
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmUri);
+        mapIntent.setPackage("com.google.android.apps.maps");
+        if (mapIntent.resolveActivity(getPackageManager()) != null) {
+            startActivity(mapIntent);
+        } else {
+            Uri browserUri = Uri.parse("https://maps.google.com/?q=" + lat + "," + lng);
+            startActivity(new Intent(Intent.ACTION_VIEW, browserUri));
+        }
+    }
+
+    // -------------------------------------------------------
+    // Mở NewChatActivity với dữ liệu place thật
+    // -------------------------------------------------------
+    private void openNewChatForPlace(Place place) {
+        Intent intent = new Intent(FavoriteActivity.this, NewChatActivity.class);
+        intent.putExtra("PLACE_ID",        place.placeId);
+        intent.putExtra("PLACE_NAME",      place.title);
+        intent.putExtra("PLACE_CATEGORY",  place.category);
+        intent.putExtra("PLACE_ADDRESS",   place.address);
+        intent.putExtra("PLACE_OPEN_TIME", place.openTime);
+        intent.putExtra("PLACE_IMAGE_URL", place.imageUrl);
+        if (place.lat != null) intent.putExtra("PLACE_LAT", place.lat);
+        if (place.lng != null) intent.putExtra("PLACE_LNG", place.lng);
         startActivity(intent);
     }
 

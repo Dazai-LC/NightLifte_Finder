@@ -107,11 +107,34 @@ public class PlaceDetailActivity extends BaseActivity {
                         currentPlace = place;
                         renderPlace(place);
                         checkFavoriteStatus();
+                        saveToHistory(placeId); // ghi lịch sử
                     }
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Lỗi tải dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
+
+    /**
+     * Lưu placeId vào SharedPreferences (tối đa 10 địa điểm gần đây).
+     * Dùng LinkedHashSet để giữ thứ tự và tránh trùng lặp.
+     */
+    private void saveToHistory(String pid) {
+        android.content.SharedPreferences prefs =
+                getSharedPreferences("nightlife_history", MODE_PRIVATE);
+        java.util.Set<String> existing =
+                prefs.getStringSet("recent_place_ids", new java.util.LinkedHashSet<>());
+
+        // Tạo LinkedHashSet mới để có thể thêm và giới hạn 10
+        java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>();
+        updated.add(pid); // thêm mới nhất lên đầu
+        for (String id : existing) {
+            if (updated.size() >= 10) break;
+            updated.add(id);
+        }
+
+        prefs.edit().putStringSet("recent_place_ids", updated).apply();
+    }
+
 
     private void renderPlace(Place place) {
         // Name

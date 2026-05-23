@@ -35,6 +35,7 @@ public class NewChatActivity extends BaseActivity {
         chatRepository = new ChatRepository();
 
         bindViews();
+        prefillFromIntent();
         setupButtons();
     }
 
@@ -66,6 +67,70 @@ public class NewChatActivity extends BaseActivity {
         findViewById(R.id.newChatBBQ).setOnClickListener(v -> openDemoChat("bbq", "Nhậu và Có BBQ"));
         findViewById(R.id.newChatChe).setOnClickListener(v -> openDemoChat("che", "Chè Khuya Hà Nội"));
         findViewById(R.id.newChatPizza).setOnClickListener(v -> openDemoChat("pizza", "Pizza Midnight"));
+    }
+
+    // -------------------------------------------------------
+    // Prefill form từ dữ liệu place (nếu được mở từ FavoriteActivity)
+    // -------------------------------------------------------
+    private void prefillFromIntent() {
+        Intent intent = getIntent();
+        String placeName    = intent.getStringExtra("PLACE_NAME");
+        if (placeName == null || placeName.isEmpty()) return; // mở thủ công bình thường
+
+        String placeCategory = intent.getStringExtra("PLACE_CATEGORY");
+        String placeAddress  = intent.getStringExtra("PLACE_ADDRESS");
+        String placeOpenTime = intent.getStringExtra("PLACE_OPEN_TIME");
+        String placeImageUrl = intent.getStringExtra("PLACE_IMAGE_URL");
+
+        // Điền tên quán
+        if (searchShopInput != null)   searchShopInput.setText(placeName);
+
+        // Điền category
+        if (shopCategoryInput != null && placeCategory != null)
+            shopCategoryInput.setText(placeCategory);
+
+        // Điền địa chỉ
+        if (shopAddressInput != null && placeAddress != null)
+            shopAddressInput.setText(placeAddress);
+
+        // Điền openTime: cố gắng parse giờ, nếu không parse được thì giữ nguyên chuỗi
+        if (shopOpenTimeInput != null && placeOpenTime != null) {
+            String openTimeVal = parseOpenTime(placeOpenTime);
+            shopOpenTimeInput.setText(openTimeVal);
+        }
+
+        // Emoji avatar phù hợp với category
+        if (shopAvatarInput != null)
+            shopAvatarInput.setText(categoryToEmoji(placeImageUrl, placeCategory));
+    }
+
+    /**
+     * Cố gắng trích xuất HH:MM từ chuỗi openTime kiểu "Mở đến 02:30".
+     * Nếu không match thì trả về chuỗi gốc.
+     */
+    private String parseOpenTime(String raw) {
+        if (raw == null) return "18:00";
+        // Tìm pattern HH:MM trong chuỗi
+        java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("(\\d{1,2}:\\d{2})").matcher(raw);
+        return m.find() ? m.group(1) : raw;
+    }
+
+    /** Chuyển imageUrl hoặc category sang emoji đại diện */
+    private String categoryToEmoji(String imageUrl, String category) {
+        String key = (imageUrl != null && !imageUrl.isEmpty()) ? imageUrl : category;
+        if (key == null) return "💬";
+        switch (key.toLowerCase()) {
+            case "bunbo":   case "bún bò":  return "🍜";
+            case "bbq":     case "nướng":   return "🌢";
+            case "lau":     case "lẩu":     return "🍲";
+            case "pizza":                   return "🍕";
+            case "che":     case "trà sữa": return "🧋";
+            case "bar":                     return "🍺";
+            case "diner":   case "cơm":     return "🍚";
+            case "phở":                     return "🍜";
+            default:                        return "💬";
+        }
     }
 
     // -------------------------------------------------------
