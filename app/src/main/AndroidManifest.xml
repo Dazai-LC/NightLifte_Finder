@@ -82,6 +82,11 @@
 
         </activity>
 
+        <activity
+            android:name=".activities.PlaceDetailActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyPlaceholderGeoApiKey_Nightlife_12345" />

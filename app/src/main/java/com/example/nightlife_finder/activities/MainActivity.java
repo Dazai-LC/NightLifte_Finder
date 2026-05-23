@@ -137,25 +137,21 @@ public class MainActivity extends BaseActivity {
     // Flash deal card click handlers
     // -------------------------------------------------------
     private void setupFlashDealClicks() {
-        // Deal 1 – Neon Bites
+        // Deal 1 – Bún bò Đêm Phố Cổ → place_1
         if (findViewById(R.id.dealCard1) != null) {
-            findViewById(R.id.dealCard1).setOnClickListener(v ->
-                    openChatDetail("bbq"));
+            findViewById(R.id.dealCard1).setOnClickListener(v -> openPlaceDetail("place_1"));
         }
-        // Deal 2 – Sushi Mang
+        // Deal 2 – Lẩu khuya Hoàn Kiếm → place_3
         if (findViewById(R.id.dealCard2) != null) {
-            findViewById(R.id.dealCard2).setOnClickListener(v ->
-                    openChatDetail("lau"));
+            findViewById(R.id.dealCard2).setOnClickListener(v -> openPlaceDetail("place_3"));
         }
-        // Deal 3 – Pizza Đêm
+        // Deal 3 – Pizza Midnight Hà Nội → place_4
         if (findViewById(R.id.dealCard3) != null) {
-            findViewById(R.id.dealCard3).setOnClickListener(v ->
-                    openChatDetail("pizza"));
+            findViewById(R.id.dealCard3).setOnClickListener(v -> openPlaceDetail("place_4"));
         }
-        // Deal 4 – Night BBQ
+        // Deal 4 – Đồ nướng Hàng Bạc → place_2
         if (findViewById(R.id.dealCard4) != null) {
-            findViewById(R.id.dealCard4).setOnClickListener(v ->
-                    openChatDetail("bbq"));
+            findViewById(R.id.dealCard4).setOnClickListener(v -> openPlaceDetail("place_2"));
         }
     }
 
@@ -163,13 +159,13 @@ public class MainActivity extends BaseActivity {
     // Hot places this week
     // -------------------------------------------------------
     private void setupHotPlaceClicks() {
+        // cardHot1 – Bạch tuộc Neon → place_6
         if (findViewById(R.id.cardHot1) != null) {
-            findViewById(R.id.cardHot1).setOnClickListener(v ->
-                    openChatDetail("bbq"));
+            findViewById(R.id.cardHot1).setOnClickListener(v -> openPlaceDetail("place_6"));
         }
+        // cardHot2 – Cơm Tấm Đêm Hà Nội → place_9
         if (findViewById(R.id.cardHot2) != null) {
-            findViewById(R.id.cardHot2).setOnClickListener(v ->
-                    openChatDetail("bunbo"));
+            findViewById(R.id.cardHot2).setOnClickListener(v -> openPlaceDetail("place_9"));
         }
         // "Xem tất cả" link beside the section header
         if (findViewById(R.id.btnViewAllHot) != null) {
@@ -182,13 +178,13 @@ public class MainActivity extends BaseActivity {
     // Near you cards
     // -------------------------------------------------------
     private void setupNearYouClicks() {
+        // cardNear1 – Quán ăn Starlight → place_7
         if (findViewById(R.id.cardNear1) != null) {
-            findViewById(R.id.cardNear1).setOnClickListener(v ->
-                    openChatDetail("bunbo"));
+            findViewById(R.id.cardNear1).setOnClickListener(v -> openPlaceDetail("place_7"));
         }
+        // cardNear2 – Pizza lát đỏ thẫm → place_8
         if (findViewById(R.id.cardNear2) != null) {
-            findViewById(R.id.cardNear2).setOnClickListener(v ->
-                    openChatDetail("pizza"));
+            findViewById(R.id.cardNear2).setOnClickListener(v -> openPlaceDetail("place_8"));
         }
         // "Xem bản đồ" link
         if (findViewById(R.id.btnViewMap) != null) {
@@ -201,11 +197,10 @@ public class MainActivity extends BaseActivity {
     // AI suggestion card
     // -------------------------------------------------------
     private void setupAiSuggestionClicks() {
+        // cardAiSuggest – Trà sữa 24h Phố Cổ → place_5
         if (findViewById(R.id.cardAiSuggest) != null) {
-            findViewById(R.id.cardAiSuggest).setOnClickListener(v -> {
-                Toast.makeText(this, "🤖 AI gợi ý: Sushi khuya Tokyo – 0,9 km, còn bàn!", Toast.LENGTH_LONG).show();
-                openChatDetail("lau");
-            });
+            findViewById(R.id.cardAiSuggest).setOnClickListener(v ->
+                openPlaceDetail("place_5"));
         }
     }
 
@@ -213,9 +208,9 @@ public class MainActivity extends BaseActivity {
     // Late-night places
     // -------------------------------------------------------
     private void setupLateNightClicks() {
+        // cardLateNight – Phở Gà Đêm Hàng Bạc → place_10
         if (findViewById(R.id.cardLateNight) != null) {
-            findViewById(R.id.cardLateNight).setOnClickListener(v ->
-                    openChatDetail("lau"));
+            findViewById(R.id.cardLateNight).setOnClickListener(v -> openPlaceDetail("place_10"));
         }
     }
 
@@ -232,6 +227,14 @@ public class MainActivity extends BaseActivity {
     // -------------------------------------------------------
     // Open chat detail screen for a given shop
     // -------------------------------------------------------
+    /** Mở PlaceDetailActivity với placeId từ Firestore */
+    private void openPlaceDetail(String placeId) {
+        Intent intent = new Intent(MainActivity.this, PlaceDetailActivity.class);
+        intent.putExtra(PlaceDetailActivity.EXTRA_PLACE_ID, placeId);
+        startActivity(intent);
+    }
+
+    /** Mở ChatDetailActivity với chatId hardcode (demo cũ) */
     private void openChatDetail(String chatId) {
         Intent intent = new Intent(MainActivity.this, ChatDetailActivity.class);
         intent.putExtra("CHAT_ID", chatId);

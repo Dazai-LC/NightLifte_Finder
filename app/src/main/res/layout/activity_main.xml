@@ -145,7 +145,7 @@
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
                                 android:src="@drawable/burger"
-                                android:contentDescription="Burger" />
+                                android:contentDescription="Bún bò Đêm Phố Cổ" />
 
                             <View
                                 android:layout_width="match_parent"
@@ -176,7 +176,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Neon Bites"
+                                    android:text="Bún bò Đêm Phố Cổ"
                                     android:textColor="#FFFFFF"
                                     android:textStyle="bold"
                                     android:textSize="15sp" />
@@ -214,7 +214,7 @@
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
                                 android:src="@drawable/sushi"
-                                android:contentDescription="Sushi" />
+                                android:contentDescription="Lẩu khuya Hoàn Kiếm" />
 
                             <View
                                 android:layout_width="match_parent"
@@ -245,7 +245,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Sushi Mang"
+                                    android:text="Lẩu khuya Hoàn Kiếm"
                                     android:textColor="#FFFFFF"
                                     android:textStyle="bold"
                                     android:textSize="15sp" />
@@ -314,7 +314,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Pizza Đêm"
+                                    android:text="Pizza Midnight Hà Nội"
                                     android:textColor="#FFFFFF"
                                     android:textStyle="bold"
                                     android:textSize="15sp" />
@@ -352,7 +352,7 @@
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
                                 android:src="@drawable/bar"
-                                android:contentDescription="Night BBQ" />
+                                android:contentDescription="Đồ nướng Hàng Bạc" />
 
                             <View
                                 android:layout_width="match_parent"
@@ -383,7 +383,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Night BBQ"
+                                    android:text="Đồ nướng Hàng Bạc"
                                     android:textColor="#FFFFFF"
                                     android:textStyle="bold"
                                     android:textSize="15sp" />
@@ -507,7 +507,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Hải sản • Cocktail • 0,8 dặm"
+                            android:text="Nướng • 8 Tạ Hiện, Hoàn Kiếm • Mở đến 02:00"
                             android:textColor="#9CA0AA"
                             android:textSize="13sp" />
 
@@ -544,8 +544,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="centerCrop"
-                            android:src="@drawable/burger"
-                            android:contentDescription="Bánh mì kẹp thịt" />
+                            android:src="@drawable/bar"
+                            android:contentDescription="Cơm Tấm Đêm Hà Nội" />
 
                         <TextView
                             android:layout_width="42dp"
@@ -579,7 +579,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
-                            android:text="Bánh mì kẹp thịt Velocity"
+                            android:text="Cơm Tấm Đêm Hà Nội"
                             android:textColor="#FFFFFF"
                             android:textStyle="bold"
                             android:textSize="17sp" />
@@ -588,7 +588,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Thức ăn nhanh Mỹ • 1,2 dặm"
+                            android:text="Cơm • 52 Hàng Bông, Hoàn Kiếm • Mở đến 03:00"
                             android:textColor="#9CA0AA"
                             android:textSize="13sp" />
 
@@ -775,7 +775,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🤖 AI gợi ý cho bạn"
+                android:text="🍵 Gợi ý cho bạn"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"
                 android:textSize="19sp"
@@ -808,7 +808,7 @@
                         android:layout_height="82dp"
                         android:scaleType="centerCrop"
                         android:src="@drawable/sushi"
-                        android:contentDescription="Sushi khuya Tokyo" />
+                        android:contentDescription="Trà sữa 24h Phố Cổ" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -820,7 +820,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Sushi khuya Tokyo"
+                            android:text="Trà sữa 24h Phố Cổ"
                             android:textColor="#FFFFFF"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -828,7 +828,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="AI gợi ý vì bạn thích món nhẹ buổi tối"
+                            android:text="38 Hàng Đường, Hoàn Kiếm • Mở cả đêm"
                             android:textColor="#A0A0A8"
                             android:textSize="12sp" />
 
@@ -836,7 +836,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="5dp"
-                            android:text="⭐ 4.8 • 0,9 km • Còn bàn"
+                            android:text="⭐ 4.8 • Trà sữa • Mở cả đêm"
                             android:textColor="#32CD32"
                             android:textSize="12sp" />
 
@@ -882,8 +882,8 @@
                         android:layout_width="82dp"
                         android:layout_height="82dp"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/bar"
-                        android:contentDescription="Lẩu đêm Neon" />
+                        android:src="@drawable/diner"
+                        android:contentDescription="Phở Gà Đêm Hàng Bạc" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -895,7 +895,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Lẩu đêm Neon"
+                            android:text="Phở Gà Đêm Hàng Bạc"
                             android:textColor="#FFFFFF"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -903,7 +903,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Mở đến 03:30 sáng"
+                            android:text="Mở đến 04:00 sáng"
                             android:textColor="#32CD32"
                             android:textSize="12sp" />
 
@@ -911,7 +911,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="5dp"
-                            android:text="0,7 km • Đường nhanh nhất 6 phút"
+                            android:text="86 Hàng Bạc, Hoàn Kiếm • Phở"
                             android:textColor="#A0A0A8"
                             android:textSize="12sp" />
 
