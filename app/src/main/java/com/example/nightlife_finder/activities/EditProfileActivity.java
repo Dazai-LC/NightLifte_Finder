@@ -1,9 +1,11 @@
 package com.example.nightlife_finder.activities;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Switch;
@@ -14,12 +16,21 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.example.nightlife_finder.R;
+import com.example.nightlife_finder.constants.FirebaseConstants;
 import com.example.nightlife_finder.utils.AppSettings;
 import com.example.nightlife_finder.utils.ValidationUtils;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EditProfileActivity extends BaseActivity {
+
+    private static final String TAG = "EditProfileActivity";
 
     private ImageView imgEditAvatar;
 
@@ -96,13 +107,21 @@ public class EditProfileActivity extends BaseActivity {
     }
 
     // -------------------------------------------------------
-    // Load existing data into fields
+    // Load existing data – Firestore first, SharedPreferences fallback
     // -------------------------------------------------------
     private void loadData() {
+        // Set email from FirebaseAuth (read-only)
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getEmail() != null) {
+            inputEmail.setText(currentUser.getEmail());
+        }
+        inputEmail.setEnabled(false); // Email không cho sửa
+        inputEmail.setAlpha(0.6f);
+
+        // Load local fallback values first (instant display)
         inputName.setText(AppSettings.getProfileName(this));
         inputBirthday.setText(AppSettings.getProfileBirthday(this));
         inputPhone.setText(AppSettings.getProfilePhone(this));
-        inputEmail.setText(AppSettings.getProfileEmail(this));
         inputLocation.setText(AppSettings.getProfileLocation(this));
         inputBio.setText(AppSettings.getProfileBio(this));
 
@@ -112,6 +131,38 @@ public class EditProfileActivity extends BaseActivity {
         switchTwoFactor.setChecked(AppSettings.isTwoFactorEnabled(this));
 
         loadAvatar();
+
+        // Now override with Firestore data (source of truth)
+        if (currentUser != null) {
+            String uid = currentUser.getUid();
+            FirebaseFirestore.getInstance()
+                    .collection(FirebaseConstants.COLLECTION_USERS)
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String displayName = doc.getString(FirebaseConstants.FIELD_DISPLAY_NAME);
+                            String phone = doc.getString(FirebaseConstants.FIELD_PHONE);
+                            String location = doc.getString(FirebaseConstants.FIELD_LOCATION);
+                            String bio = doc.getString(FirebaseConstants.FIELD_BIO);
+
+                            if (displayName != null && !displayName.isEmpty()) {
+                                inputName.setText(displayName);
+                            }
+                            if (phone != null && !phone.isEmpty()) {
+                                inputPhone.setText(phone);
+                            }
+                            if (location != null && !location.isEmpty()) {
+                                inputLocation.setText(location);
+                            }
+                            if (bio != null && !bio.isEmpty()) {
+                                inputBio.setText(bio);
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e ->
+                            Log.w(TAG, "Failed to load profile from Firestore", e));
+        }
     }
 
     // -------------------------------------------------------
@@ -174,18 +225,19 @@ public class EditProfileActivity extends BaseActivity {
         // Save
         findViewById(R.id.btnSaveProfile).setOnClickListener(v -> saveProfile());
 
-        // Delete account (demo)
+        // Delete account – safe warning only
         findViewById(R.id.btnDeleteAccount).setOnClickListener(v ->
                 showDeleteAccountConfirmation());
     }
 
     // -------------------------------------------------------
-    // Save profile to SharedPreferences
+    // Save profile to Firestore (merge) + SharedPreferences cache
     // -------------------------------------------------------
     private void saveProfile() {
-        String name  = inputName.getText().toString().trim();
-        String phone = inputPhone.getText().toString().trim();
-        String email = inputEmail.getText().toString().trim();
+        String name     = inputName.getText().toString().trim();
+        String phone    = inputPhone.getText().toString().trim();
+        String location = inputLocation.getText().toString().trim();
+        String bio      = inputBio.getText().toString().trim();
 
         // Validate name
         if (ValidationUtils.isEmpty(name)) {
@@ -201,35 +253,55 @@ public class EditProfileActivity extends BaseActivity {
             return;
         }
 
-        // Validate email (optional but validated if filled)
-        if (!email.isEmpty() && !ValidationUtils.isValidEmail(email)) {
-            inputEmail.setError("Định dạng email không hợp lệ");
-            inputEmail.requestFocus();
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Lỗi: Không tìm thấy tài khoản đăng nhập.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Persist all fields
-        AppSettings.setProfileName(this, name);
-        AppSettings.setProfileBirthday(this, inputBirthday.getText().toString().trim());
-        AppSettings.setProfilePhone(this, phone);
-        AppSettings.setProfileEmail(this, email);
-        AppSettings.setProfileLocation(this, inputLocation.getText().toString().trim());
-        AppSettings.setProfileBio(this, inputBio.getText().toString().trim());
+        String uid = currentUser.getUid();
 
-        Toast.makeText(this, "✅ Đã lưu hồ sơ thành công", Toast.LENGTH_SHORT).show();
-        finish();
+        // Build map for Firestore merge – chỉ ghi các field profile, không ghi đè favorites
+        Map<String, Object> profileData = new HashMap<>();
+        profileData.put(FirebaseConstants.FIELD_DISPLAY_NAME, name);
+        profileData.put(FirebaseConstants.FIELD_PHONE, phone);
+        profileData.put(FirebaseConstants.FIELD_LOCATION, location);
+        profileData.put(FirebaseConstants.FIELD_BIO, bio);
+
+        FirebaseFirestore.getInstance()
+                .collection(FirebaseConstants.COLLECTION_USERS)
+                .document(uid)
+                .set(profileData, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    // Cache to SharedPreferences
+                    AppSettings.setProfileName(EditProfileActivity.this, name);
+                    AppSettings.setProfilePhone(EditProfileActivity.this, phone);
+                    AppSettings.setProfileLocation(EditProfileActivity.this, location);
+                    AppSettings.setProfileBio(EditProfileActivity.this, bio);
+
+                    // Also persist birthday locally (not in Firestore for now)
+                    AppSettings.setProfileBirthday(EditProfileActivity.this,
+                            inputBirthday.getText().toString().trim());
+
+                    Toast.makeText(EditProfileActivity.this,
+                            "✅ Đã lưu hồ sơ thành công", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to save profile to Firestore", e);
+                    Toast.makeText(EditProfileActivity.this,
+                            "Lỗi lưu hồ sơ: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 
     // -------------------------------------------------------
-    // Delete account – demo confirmation dialog
+    // Delete account – safe warning, no real deletion
     // -------------------------------------------------------
     private void showDeleteAccountConfirmation() {
-        new android.app.AlertDialog.Builder(this)
+        new AlertDialog.Builder(this)
                 .setTitle("Xóa tài khoản")
-                .setMessage("Bạn có chắc muốn xóa tài khoản? Hành động này không thể hoàn tác.")
-                .setPositiveButton("Xóa", (dialog, which) ->
-                        Toast.makeText(this, "Demo: Tài khoản đã được xóa.", Toast.LENGTH_SHORT).show())
-                .setNegativeButton("Hủy", null)
+                .setMessage("Xóa tài khoản thật chưa được bật trong bản demo để tránh mất dữ liệu.\n\nNếu bạn cần xóa tài khoản, vui lòng liên hệ đội ngũ phát triển.")
+                .setPositiveButton("Đã hiểu", null)
                 .show();
     }
 }

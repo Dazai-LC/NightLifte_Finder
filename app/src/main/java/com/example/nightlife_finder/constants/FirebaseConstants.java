@@ -22,6 +22,11 @@ public class FirebaseConstants {
     public static final String FIELD_UID          = "uid";
     public static final String FIELD_EMAIL        = "email";
     public static final String FIELD_FAVORITES    = "favorites";
+    public static final String FIELD_DISPLAY_NAME = "displayName";
+    public static final String FIELD_PHONE        = "phone";
+    public static final String FIELD_LOCATION     = "location";
+    public static final String FIELD_BIO          = "bio";
+    public static final String FIELD_AVATAR_URL   = "avatarUrl";
 
     // -------------------------------------------------------
     // Tên Field trong Collection PLACES

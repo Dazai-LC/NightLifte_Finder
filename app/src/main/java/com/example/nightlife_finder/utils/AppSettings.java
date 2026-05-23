@@ -69,7 +69,7 @@ public class AppSettings {
     // Profile fields
     // -------------------------------------------------------
     public static String getProfileName(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_NAME, "Vũ Văn Thành");
+        return getPrefs(context).getString(KEY_PROFILE_NAME, "");
     }
 
     public static void setProfileName(Context context, String value) {
@@ -85,7 +85,7 @@ public class AppSettings {
     }
 
     public static String getProfileBirthday(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_BIRTHDAY, "15/03/1998");
+        return getPrefs(context).getString(KEY_PROFILE_BIRTHDAY, "");
     }
 
     public static void setProfileBirthday(Context context, String value) {
@@ -93,7 +93,7 @@ public class AppSettings {
     }
 
     public static String getProfilePhone(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_PHONE, "0912 345 678");
+        return getPrefs(context).getString(KEY_PROFILE_PHONE, "");
     }
 
     public static void setProfilePhone(Context context, String value) {
@@ -101,7 +101,7 @@ public class AppSettings {
     }
 
     public static String getProfileEmail(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_EMAIL, "thanh.vu@gmail.com");
+        return getPrefs(context).getString(KEY_PROFILE_EMAIL, "");
     }
 
     public static void setProfileEmail(Context context, String value) {
@@ -109,7 +109,7 @@ public class AppSettings {
     }
 
     public static String getProfileLocation(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_LOCATION, "Hà Nội, Việt Nam");
+        return getPrefs(context).getString(KEY_PROFILE_LOCATION, "");
     }
 
     public static void setProfileLocation(Context context, String value) {
@@ -117,7 +117,7 @@ public class AppSettings {
     }
 
     public static String getProfileBio(Context context) {
-        return getPrefs(context).getString(KEY_PROFILE_BIO, "Mình là người thích khám phá ẩm thực Việt Nam.");
+        return getPrefs(context).getString(KEY_PROFILE_BIO, "");
     }
 
     public static void setProfileBio(Context context, String value) {

@@ -78,36 +78,39 @@
                         android:gravity="center">
 
                         <TextView
+                            android:id="@+id/chipFavorites"
                             android:layout_width="wrap_content"
                             android:layout_height="34dp"
                             android:gravity="center"
                             android:paddingStart="18dp"
                             android:paddingEnd="18dp"
-                            android:text="48 Điểm"
+                            android:text="… Yêu thích"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:background="@drawable/profile_chip_bg" />
 
                         <TextView
+                            android:id="@+id/chipConversations"
                             android:layout_width="wrap_content"
                             android:layout_height="34dp"
                             android:layout_marginStart="10dp"
                             android:gravity="center"
                             android:paddingStart="18dp"
                             android:paddingEnd="18dp"
-                            android:text="12 Yêu thích"
+                            android:text="… Trò chuyện"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:background="@drawable/profile_chip_bg" />
 
                         <TextView
+                            android:id="@+id/chipHistory"
                             android:layout_width="wrap_content"
                             android:layout_height="34dp"
                             android:layout_marginStart="10dp"
                             android:gravity="center"
                             android:paddingStart="18dp"
                             android:paddingEnd="18dp"
-                            android:text="7 Đánh giá"
+                            android:text="… Đã xem"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:background="@drawable/profile_chip_bg" />
