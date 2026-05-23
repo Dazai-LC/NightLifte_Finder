@@ -271,6 +271,9 @@ public class ProfileActivity extends BaseActivity {
         findViewById(R.id.cardSupport).setOnClickListener(v -> showExpansionDialog("Hỗ trợ"));
         findViewById(R.id.rowAddress).setOnClickListener(v -> showExpansionDialog("Địa chỉ của tôi"));
         findViewById(R.id.rowSocial).setOnClickListener(v -> showExpansionDialog("Liên kết mạng xã hội"));
+        findViewById(R.id.rowAdminPlace).setOnClickListener(v -> {
+            startActivity(new Intent(ProfileActivity.this, AdminDashboardActivity.class));
+        });
 
         // --- Đổi mật khẩu thật ---
         findViewById(R.id.rowPassword).setOnClickListener(v -> handlePasswordReset());

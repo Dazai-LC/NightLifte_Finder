@@ -260,6 +260,23 @@
                     android:textStyle="bold"
                     android:textSize="14sp" />
 
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/divider_color" />
+
+                <TextView
+                    android:id="@+id/rowAdminPlace"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="🛠  Quản lý địa điểm (Admin)                   ›"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+
             </LinearLayout>
 
             <!-- CÀI ĐẶT -->

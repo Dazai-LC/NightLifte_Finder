@@ -92,6 +92,31 @@
             android:screenOrientation="portrait"
             android:exported="false" />
 
+        <activity
+            android:name=".activities.AdminDashboardActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AdminPlacesActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AdminOpeningHoursActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AdminImagesActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AdminReviewsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyPlaceholderGeoApiKey_Nightlife_12345" />
