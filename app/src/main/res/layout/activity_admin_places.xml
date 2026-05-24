@@ -36,6 +36,19 @@
             android:textStyle="bold"
             android:paddingStart="8dp" />
 
+        <TextView
+            android:id="@+id/btnAddPlace"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="+ Thêm"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:background="@drawable/admin_icon_bg" />
+
     </LinearLayout>
 
     <!-- SEARCH & FILTER -->
@@ -47,6 +60,7 @@
         android:background="#1A1A1F">
 
         <EditText
+            android:id="@+id/edtSearchPlace"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:background="@drawable/admin_module_bg"
@@ -69,6 +83,7 @@
                 android:orientation="horizontal">
 
                 <TextView
+                    android:id="@+id/filterAll"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:text="Tất cả"
@@ -81,6 +96,7 @@
                     android:layout_marginEnd="8dp" />
 
                 <TextView
+                    android:id="@+id/filterRestaurant"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:text="Quán ăn"
@@ -93,6 +109,7 @@
                     android:layout_marginEnd="8dp" />
 
                 <TextView
+                    android:id="@+id/filterMart"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:text="Siêu thị"
@@ -105,9 +122,23 @@
                     android:layout_marginEnd="8dp" />
 
                 <TextView
+                    android:id="@+id/filterOpen"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
-                    android:text="Đang mở"
+                    android:text="Đang hiển thị"
+                    android:textColor="#9CA0AA"
+                    android:background="@drawable/admin_card_bg"
+                    android:gravity="center"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/filterClosed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Tạm khóa"
                     android:textColor="#9CA0AA"
                     android:background="@drawable/admin_card_bg"
                     android:gravity="center"
