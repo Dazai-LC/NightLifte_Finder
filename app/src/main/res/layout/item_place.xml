@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="15dp"
+    android:layout_marginEnd="15dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#1A1A1F"
+    app:strokeWidth="1dp"
+    app:strokeColor="#242430">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="10dp">
+
+        <!-- Ảnh địa điểm (ImageView + fallback emoji TextView chồng lên) -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp">
+
+            <ImageView
+                android:id="@+id/imgPlace"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="Ảnh địa điểm" />
+
+            <!-- Fallback emoji nếu imageUrl không load được -->
+            <TextView
+                android:id="@+id/txtPlaceEmoji"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:gravity="center"
+                android:textSize="32sp"
+                android:text="🍽️"
+                android:background="#1A1A1F"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+        <!-- Thông tin địa điểm -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp">
+
+            <TextView
+                android:id="@+id/txtPlaceName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Tên địa điểm" />
+
+            <TextView
+                android:id="@+id/txtPlaceCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#A020F0"
+                android:textSize="11sp"
+                android:text="Danh mục" />
+
+            <TextView
+                android:id="@+id/txtPlaceAddress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#A0A0A8"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Địa chỉ" />
+
+            <TextView
+                android:id="@+id/txtPlaceOpenTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="#32CD32"
+                android:textSize="11sp"
+                android:text="Giờ mở cửa" />
+
+        </LinearLayout>
+
+        <!-- Mũi tên điều hướng -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="›"
+            android:textColor="#8A8A95"
+            android:textSize="22sp"
+            android:paddingStart="4dp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

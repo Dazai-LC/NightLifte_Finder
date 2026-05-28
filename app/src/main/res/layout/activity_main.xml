@@ -921,6 +921,80 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- ===== TẤT CẢ ĐỊA ĐIỂM (FIRESTORE ĐỘNG) ===== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="15dp"
+                android:paddingEnd="15dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🏙️ Tất cả địa điểm"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="19sp" />
+
+            </LinearLayout>
+
+            <!-- Đang tải -->
+            <TextView
+                android:id="@+id/txtPlacesLoading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⏳ Đang tải địa điểm..."
+                android:textColor="#8A8A95"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp"
+                android:visibility="visible" />
+
+            <!-- Không có địa điểm -->
+            <TextView
+                android:id="@+id/txtPlacesEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Chưa có địa điểm đang hiển thị."
+                android:textColor="#8A8A95"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp"
+                android:visibility="gone" />
+
+            <!-- Lỗi Firestore -->
+            <TextView
+                android:id="@+id/txtPlacesError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#FF4D5A"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone" />
+
+            <!-- RecyclerView danh sách địa điểm từ Firestore -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPlaces"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                android:clipToPadding="false"
+                android:paddingBottom="8dp"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </ScrollView>

@@ -6,12 +6,25 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.nightlife_finder.R;
+import com.example.nightlife_finder.adapters.PlaceAdapter;
+import com.example.nightlife_finder.constants.FirebaseConstants;
+import com.example.nightlife_finder.firebase.FirebaseManager;
+import com.example.nightlife_finder.models.Place;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BaseActivity {
 
@@ -36,6 +49,16 @@ public class MainActivity extends BaseActivity {
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private Runnable timerRunnable;
 
+    // -------------------------------------------------------
+    // Firestore places section
+    // -------------------------------------------------------
+    private RecyclerView rvPlaces;
+    private TextView txtPlacesLoading;
+    private TextView txtPlacesEmpty;
+    private TextView txtPlacesError;
+    private PlaceAdapter placeAdapter;
+    private FirebaseFirestore db;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +79,9 @@ public class MainActivity extends BaseActivity {
         setupSystemBars();
         setContentView(R.layout.activity_main);
 
+        // Firestore instance
+        db = FirebaseManager.getInstance().getFirestore();
+
         bindTimerViews();
         setupFlashDealClicks();
         setupHotPlaceClicks();
@@ -64,8 +90,16 @@ public class MainActivity extends BaseActivity {
         setupLateNightClicks();
         setupSearchBar();
         setupBottomNavigation();
+        setupPlacesRecyclerView(); // chỉ setup RecyclerView, không load data
 
         startCountdownTimers();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Reload places mỗi khi quay lại Home (từ PlaceDetail, Admin, v.v.)
+        loadPlacesFromFirestore();
     }
 
     @Override
@@ -248,16 +282,102 @@ public class MainActivity extends BaseActivity {
     }
 
     // -------------------------------------------------------
-    // Open chat detail screen for a given shop
+    // Firestore places section – setup UI (gọi 1 lần trong onCreate)
     // -------------------------------------------------------
-    /** Mở PlaceDetailActivity với placeId từ Firestore */
+    private void setupPlacesRecyclerView() {
+        rvPlaces         = findViewById(R.id.rvPlaces);
+        txtPlacesLoading = findViewById(R.id.txtPlacesLoading);
+        txtPlacesEmpty   = findViewById(R.id.txtPlacesEmpty);
+        txtPlacesError   = findViewById(R.id.txtPlacesError);
+
+        if (rvPlaces == null) return; // layout không có RecyclerView thì bỏ qua
+
+        // Setup RecyclerView một lần duy nhất
+        placeAdapter = new PlaceAdapter(this);
+        rvPlaces.setLayoutManager(new LinearLayoutManager(this));
+        rvPlaces.setAdapter(placeAdapter);
+
+        // Click item → mở PlaceDetailActivity với documentId thật
+        placeAdapter.setOnPlaceClickListener(placeId -> openPlaceDetail(placeId));
+    }
+
+    // -------------------------------------------------------
+    // Load places từ Firestore – gọi trong onResume để luôn cập nhật
+    // -------------------------------------------------------
+    private void loadPlacesFromFirestore() {
+        // Guard: adapter chưa được setup (rvPlaces null) thì bỏ qua
+        if (placeAdapter == null || rvPlaces == null) return;
+
+        // Hiển thị trạng thái loading
+        showPlacesState(PlacesState.LOADING);
+
+        // Load collection "places" từ Firestore
+        db.collection(FirebaseConstants.COLLECTION_PLACES)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Place> activeList = new ArrayList<>();
+
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        // Lọc isActive:
+                        //   - isActive == false  → bỏ qua (tạm khóa)
+                        //   - isActive == true hoặc field không tồn tại → hiển thị
+                        Boolean isActive = doc.getBoolean("isActive");
+                        if (Boolean.FALSE.equals(isActive)) {
+                            continue;
+                        }
+
+                        // Map document sang Place object
+                        Place place = doc.toObject(Place.class);
+                        if (place != null) {
+                            // @DocumentId thường tự fill, nhưng fallback thủ công
+                            if (place.getId() == null || place.getId().isEmpty()) {
+                                place.setId(doc.getId());
+                            }
+                            activeList.add(place);
+                        }
+                    }
+
+                    // setPlaces() đã clear list cũ trước khi add mới (tránh duplicate)
+                    if (activeList.isEmpty()) {
+                        placeAdapter.setPlaces(null); // clear adapter
+                        showPlacesState(PlacesState.EMPTY);
+                    } else {
+                        placeAdapter.setPlaces(activeList);
+                        showPlacesState(PlacesState.LOADED);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    String errMsg = "⚠️ Không tải được địa điểm: " + e.getMessage();
+                    if (txtPlacesError != null) {
+                        txtPlacesError.setText(errMsg);
+                    }
+                    showPlacesState(PlacesState.ERROR);
+                    Toast.makeText(this, errMsg, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    /** Trạng thái hiển thị của section địa điểm */
+    private enum PlacesState { LOADING, LOADED, EMPTY, ERROR }
+
+    private void showPlacesState(PlacesState state) {
+        if (txtPlacesLoading == null) return;
+        txtPlacesLoading.setVisibility(state == PlacesState.LOADING ? View.VISIBLE : View.GONE);
+        txtPlacesEmpty  .setVisibility(state == PlacesState.EMPTY   ? View.VISIBLE : View.GONE);
+        txtPlacesError  .setVisibility(state == PlacesState.ERROR   ? View.VISIBLE : View.GONE);
+        rvPlaces        .setVisibility(state == PlacesState.LOADED  ? View.VISIBLE : View.GONE);
+    }
+
+    // -------------------------------------------------------
+    // Open PlaceDetailActivity with a Firestore documentId
+    // -------------------------------------------------------
+    /** Mở PlaceDetailActivity với placeId (documentId thật từ Firestore) */
     private void openPlaceDetail(String placeId) {
         Intent intent = new Intent(MainActivity.this, PlaceDetailActivity.class);
         intent.putExtra(PlaceDetailActivity.EXTRA_PLACE_ID, placeId);
         startActivity(intent);
     }
 
-    /** Mở ChatDetailActivity với chatId hardcode (demo cũ) */
+    /** Mở ChatDetailActivity với chatId (demo cũ – giữ lại để không break) */
     private void openChatDetail(String chatId) {
         Intent intent = new Intent(MainActivity.this, ChatDetailActivity.class);
         intent.putExtra("CHAT_ID", chatId);
