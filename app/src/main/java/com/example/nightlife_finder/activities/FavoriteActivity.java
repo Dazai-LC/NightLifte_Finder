@@ -140,24 +140,6 @@ public class FavoriteActivity extends BaseActivity {
                 public void onSuccess(List<com.example.nightlife_finder.models.Place> places) {
                     favoritePlaces.clear();
                     for (com.example.nightlife_finder.models.Place p : places) {
-                        String status = "🟢 Còn chỗ";
-                        String color = "#32CD32";
-                        int crowd = 25;
-                        boolean available = true;
-                        if (p.getName().contains("Lẩu")) {
-                            status = "🔴 Đông";
-                            color = "#FF4D5A";
-                            crowd = 80;
-                            available = false;
-                        } else if (p.getName().contains("Nhậu") || p.getName().contains("bbq")) {
-                            status = "🟡 Đang đông";
-                            color = "#FFB84D";
-                            crowd = 60;
-                            available = false;
-                        }
-
-                        String[] tags = new String[]{p.getCategory(), "⭐ 4.7", "🌙 Khuya"};
-
                         int imgRes = R.drawable.bar;
                         if ("bunbo".equals(p.getImageUrl())) {
                             imgRes = R.drawable.burger;
@@ -171,16 +153,20 @@ public class FavoriteActivity extends BaseActivity {
                             imgRes = R.drawable.bar;
                         }
 
+                        List<String> tagsList = new ArrayList<>();
+                        if (p.getCategory() != null && !p.getCategory().isEmpty()) tagsList.add(p.getCategory());
+                        if (p.getOpenTime() != null && !p.getOpenTime().isEmpty()) tagsList.add(p.getOpenTime());
+
                         favoritePlaces.add(new Place(
-                                p.getName(),
-                                status,
-                                color,
-                                tags,
-                                "⭐ 4.8   •   📍 1.2 km   •   ⏱ " + p.getOpenTime(),
-                                crowd + " %",
-                                crowd,
+                                p.getName() != null ? p.getName() : "Địa điểm",
+                                "Đang hiển thị",
+                                "#32CD32",
+                                tagsList.toArray(new String[0]),
+                                p.getAddress() != null ? p.getAddress() : "Chưa có địa chỉ",
+                                "",
+                                0,
                                 imgRes,
-                                available,
+                                true,
                                 p.getId(),
                                 p.getCategory(),
                                 p.getAddress(),
@@ -219,7 +205,7 @@ public class FavoriteActivity extends BaseActivity {
         tabFavorite.setBackgroundResource(R.drawable.favorite_tab_active_bg);
         tabHistory.setBackgroundResource(0);
 
-        txtFavoriteSubtitle.setText("12 địa điểm đã lưu");
+        txtFavoriteSubtitle.setText(favoritePlaces.size() + " địa điểm đã lưu");
     }
 
     private void showHistoryTab() {
@@ -309,7 +295,7 @@ public class FavoriteActivity extends BaseActivity {
 
         if (count == 0) {
             if (favoritePlaces.isEmpty()) {
-                addEmptyText(favoriteList, "👋 Chưa có địa điểm yêu thích nào.\nHãy bấm ♥ trên trang chi tiết quán!");
+                addEmptyText(favoriteList, "Bạn chưa lưu địa điểm yêu thích nào.\nHãy mở chi tiết địa điểm và bấm Yêu thích để lưu lại.");
             } else {
                 addEmptyText(favoriteList, "🔍 Không có địa điểm nào thuộc loại \"" + currentFilter + "\".");
             }
@@ -325,7 +311,7 @@ public class FavoriteActivity extends BaseActivity {
 
         if (historyPlaces.isEmpty()) {
             addEmptyText(historyList,
-                    "📍 Lịch sử xem địa điểm sẽ được ghi nhận\nkhi bạn mở trang chi tiết quán.");
+                    "Chưa có lịch sử xem địa điểm.");
             txtFavoriteSubtitle.setText("Chưa có lịch sử");
             return;
         }
@@ -398,6 +384,23 @@ public class FavoriteActivity extends BaseActivity {
         }
     }
 
+    private void removeFavorite(Place place) {
+        com.google.firebase.auth.FirebaseUser user = new com.example.nightlife_finder.repositories.AuthRepository().getCurrentUser();
+        if (user == null) return;
+        new com.example.nightlife_finder.repositories.FavoriteRepository().removeFavorite(user.getUid(), place.placeId, new com.example.nightlife_finder.interfaces.OnFavoriteListener() {
+            @Override
+            public void onSuccess() {
+                favoritePlaces.remove(place);
+                renderFavorites();
+                Toast.makeText(FavoriteActivity.this, "Đã bỏ yêu thích", Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onError(String error) {
+                Toast.makeText(FavoriteActivity.this, "Lỗi: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void addSectionHeader(LinearLayout parent, String title, String action) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -442,7 +445,7 @@ public class FavoriteActivity extends BaseActivity {
 
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                compactMode ? dp(250) : dp(380)
+                LinearLayout.LayoutParams.WRAP_CONTENT
         );
         cardParams.setMargins(0, 0, 0, dp(18));
         card.setLayoutParams(cardParams);
@@ -495,7 +498,16 @@ public class FavoriteActivity extends BaseActivity {
         heart.setTextSize(22);
         heart.setGravity(Gravity.CENTER);
         heart.setBackgroundResource(R.drawable.favorite_heart_bg);
-        heart.setOnClickListener(v -> Toast.makeText(this, "Đã lưu " + place.title, Toast.LENGTH_SHORT).show());
+        heart.setOnClickListener(v -> {
+            new AlertDialog.Builder(FavoriteActivity.this)
+                .setTitle("Bỏ yêu thích")
+                .setMessage("Bỏ địa điểm này khỏi danh sách yêu thích?")
+                .setPositiveButton("Đồng ý", (dialog, which) -> {
+                    removeFavorite(place);
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+        });
 
         FrameLayout.LayoutParams heartParams = new FrameLayout.LayoutParams(dp(44), dp(44));
         heartParams.gravity = Gravity.END;
@@ -509,8 +521,7 @@ public class FavoriteActivity extends BaseActivity {
 
         root.addView(content, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1
+                LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
         TextView title = new TextView(this);
@@ -552,39 +563,6 @@ public class FavoriteActivity extends BaseActivity {
         meta.setTextColor(Color.parseColor("#CDD0DA"));
         meta.setTextSize(13);
         content.addView(meta);
-
-        LinearLayout crowdRow = new LinearLayout(this);
-        crowdRow.setOrientation(LinearLayout.HORIZONTAL);
-        crowdRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        LinearLayout.LayoutParams crowdRowParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(28)
-        );
-        crowdRowParams.topMargin = dp(8);
-        content.addView(crowdRow, crowdRowParams);
-
-        TextView crowdLabel = new TextView(this);
-        crowdLabel.setText("Mức độ đông đúc");
-        crowdLabel.setTextColor(Color.parseColor("#8A8A95"));
-        crowdLabel.setTextSize(12);
-        crowdRow.addView(crowdLabel, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-
-        TextView crowdValue = new TextView(this);
-        crowdValue.setText(place.crowdText);
-        crowdValue.setTextColor(Color.parseColor("#CDD0DA"));
-        crowdValue.setTextSize(12);
-        crowdRow.addView(crowdValue);
-
-        ProgressBar progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-        progressBar.setProgress(place.crowd);
-        progressBar.setProgressTintList(ColorStateList.valueOf(getCrowdColor(place.crowd)));
-        progressBar.setProgressBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#2D2D3A")));
-        content.addView(progressBar, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(6)
-        ));
 
         LinearLayout buttonRow = new LinearLayout(this);
         buttonRow.setOrientation(LinearLayout.HORIZONTAL);
