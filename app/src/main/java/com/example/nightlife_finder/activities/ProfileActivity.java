@@ -43,6 +43,10 @@ public class ProfileActivity extends BaseActivity {
     private TextView chipConversations;
     private TextView chipHistory;
 
+    private String fbUrl = "";
+    private String igUrl = "";
+    private String zaloPhone = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -169,6 +173,10 @@ public class ProfileActivity extends BaseActivity {
 
                         String phone = doc.getString(FirebaseConstants.FIELD_PHONE);
                         String bio = doc.getString(FirebaseConstants.FIELD_BIO);
+                        fbUrl = doc.getString(FirebaseConstants.FIELD_FACEBOOK_URL);
+                        igUrl = doc.getString(FirebaseConstants.FIELD_INSTAGRAM_URL);
+                        zaloPhone = doc.getString(FirebaseConstants.FIELD_ZALO_CONTACT);
+
                         if (phone != null) AppSettings.setProfilePhone(this, phone);
                         if (bio != null) AppSettings.setProfileBio(this, bio);
                         if (email != null) AppSettings.setProfileEmail(this, email);
@@ -270,7 +278,7 @@ public class ProfileActivity extends BaseActivity {
         findViewById(R.id.cardVoucher).setOnClickListener(v -> showExpansionDialog("Voucher"));
         findViewById(R.id.cardSupport).setOnClickListener(v -> showExpansionDialog("Hỗ trợ"));
         findViewById(R.id.rowAddress).setOnClickListener(v -> showExpansionDialog("Địa chỉ của tôi"));
-        findViewById(R.id.rowSocial).setOnClickListener(v -> showExpansionDialog("Liên kết mạng xã hội"));
+        findViewById(R.id.rowSocial).setOnClickListener(v -> handleSocialLinks());
         findViewById(R.id.rowAdminPlace).setOnClickListener(v -> {
             startActivity(new Intent(ProfileActivity.this, AdminDashboardActivity.class));
         });
@@ -335,6 +343,45 @@ public class ProfileActivity extends BaseActivity {
                 .setMessage("Chức năng \"" + featureName + "\" nằm trong phạm vi mở rộng.\n\nPhiên bản hiện tại tập trung vào tài khoản, yêu thích, lịch sử và trò chuyện.")
                 .setPositiveButton("Đã hiểu", null)
                 .show();
+    }
+
+    private void handleSocialLinks() {
+        String[] options = {"Facebook", "Instagram", "Zalo"};
+        new AlertDialog.Builder(this)
+                .setTitle("Mạng xã hội")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        if (fbUrl != null && !fbUrl.isEmpty()) {
+                            openBrowser(fbUrl);
+                        } else {
+                            Toast.makeText(this, "Chưa liên kết Facebook", Toast.LENGTH_SHORT).show();
+                        }
+                    } else if (which == 1) {
+                        if (igUrl != null && !igUrl.isEmpty()) {
+                            openBrowser(igUrl);
+                        } else {
+                            Toast.makeText(this, "Chưa liên kết Instagram", Toast.LENGTH_SHORT).show();
+                        }
+                    } else if (which == 2) {
+                        if (zaloPhone != null && !zaloPhone.isEmpty()) {
+                            Intent intent = new Intent(Intent.ACTION_DIAL);
+                            intent.setData(android.net.Uri.parse("tel:" + zaloPhone));
+                            startActivity(intent);
+                        } else {
+                            Toast.makeText(this, "Chưa liên kết Zalo", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .setNegativeButton("Đóng", null)
+                .show();
+    }
+
+    private void openBrowser(String url) {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://" + url;
+        }
+        Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+        startActivity(intent);
     }
 
     private void restartApp() {

@@ -27,6 +27,9 @@ public class FirebaseConstants {
     public static final String FIELD_LOCATION     = "location";
     public static final String FIELD_BIO          = "bio";
     public static final String FIELD_AVATAR_URL   = "avatarUrl";
+    public static final String FIELD_FACEBOOK_URL = "facebookUrl";
+    public static final String FIELD_INSTAGRAM_URL= "instagramUrl";
+    public static final String FIELD_ZALO_CONTACT = "zaloContact";
 
     // -------------------------------------------------------
     // Tên Field trong Collection PLACES

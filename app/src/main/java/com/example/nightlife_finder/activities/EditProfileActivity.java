@@ -40,6 +40,9 @@ public class EditProfileActivity extends BaseActivity {
     private EditText inputEmail;
     private EditText inputLocation;
     private EditText inputBio;
+    private EditText inputFacebook;
+    private EditText inputInstagram;
+    private EditText inputZalo;
 
     private TextView rowGender;
     private Switch   switchTwoFactor;
@@ -80,6 +83,9 @@ public class EditProfileActivity extends BaseActivity {
         inputEmail      = findViewById(R.id.inputEmail);
         inputLocation   = findViewById(R.id.inputLocation);
         inputBio        = findViewById(R.id.inputBio);
+        inputFacebook   = findViewById(R.id.inputFacebook);
+        inputInstagram  = findViewById(R.id.inputInstagram);
+        inputZalo       = findViewById(R.id.inputZalo);
 
         rowGender       = findViewById(R.id.rowGender);
         switchTwoFactor = findViewById(R.id.switchTwoFactor);
@@ -145,6 +151,9 @@ public class EditProfileActivity extends BaseActivity {
                             String phone = doc.getString(FirebaseConstants.FIELD_PHONE);
                             String location = doc.getString(FirebaseConstants.FIELD_LOCATION);
                             String bio = doc.getString(FirebaseConstants.FIELD_BIO);
+                            String facebook = doc.getString(FirebaseConstants.FIELD_FACEBOOK_URL);
+                            String instagram = doc.getString(FirebaseConstants.FIELD_INSTAGRAM_URL);
+                            String zalo = doc.getString(FirebaseConstants.FIELD_ZALO_CONTACT);
 
                             if (displayName != null && !displayName.isEmpty()) {
                                 inputName.setText(displayName);
@@ -157,6 +166,15 @@ public class EditProfileActivity extends BaseActivity {
                             }
                             if (bio != null && !bio.isEmpty()) {
                                 inputBio.setText(bio);
+                            }
+                            if (facebook != null && !facebook.isEmpty()) {
+                                inputFacebook.setText(facebook);
+                            }
+                            if (instagram != null && !instagram.isEmpty()) {
+                                inputInstagram.setText(instagram);
+                            }
+                            if (zalo != null && !zalo.isEmpty()) {
+                                inputZalo.setText(zalo);
                             }
                         }
                     })
@@ -267,6 +285,9 @@ public class EditProfileActivity extends BaseActivity {
         profileData.put(FirebaseConstants.FIELD_PHONE, phone);
         profileData.put(FirebaseConstants.FIELD_LOCATION, location);
         profileData.put(FirebaseConstants.FIELD_BIO, bio);
+        profileData.put(FirebaseConstants.FIELD_FACEBOOK_URL, inputFacebook.getText().toString().trim());
+        profileData.put(FirebaseConstants.FIELD_INSTAGRAM_URL, inputInstagram.getText().toString().trim());
+        profileData.put(FirebaseConstants.FIELD_ZALO_CONTACT, inputZalo.getText().toString().trim());
 
         FirebaseFirestore.getInstance()
                 .collection(FirebaseConstants.COLLECTION_USERS)

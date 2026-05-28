@@ -14,6 +14,9 @@ public class User {
     private String location;
     private String bio;
     private String avatarUrl;
+    private String facebookUrl;
+    private String instagramUrl;
+    private String zaloContact;
 
     // Firebase yêu cầu một constructor rỗng (Empty Constructor) để map dữ liệu
     public User() {
@@ -88,5 +91,29 @@ public class User {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getFacebookUrl() {
+        return facebookUrl;
+    }
+
+    public void setFacebookUrl(String facebookUrl) {
+        this.facebookUrl = facebookUrl;
+    }
+
+    public String getInstagramUrl() {
+        return instagramUrl;
+    }
+
+    public void setInstagramUrl(String instagramUrl) {
+        this.instagramUrl = instagramUrl;
+    }
+
+    public String getZaloContact() {
+        return zaloContact;
+    }
+
+    public void setZaloContact(String zaloContact) {
+        this.zaloContact = zaloContact;
     }
 }
