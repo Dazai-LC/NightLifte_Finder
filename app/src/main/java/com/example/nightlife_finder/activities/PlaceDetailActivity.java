@@ -35,6 +35,7 @@ public class PlaceDetailActivity extends BaseActivity {
     private TextView btnFavorite;
     private TextView btnDirections;
     private TextView btnBack;
+    private TextView txtInactiveWarning;
 
     private FirebaseFirestore db;
     private FavoriteRepository favoriteRepository;
@@ -79,6 +80,7 @@ public class PlaceDetailActivity extends BaseActivity {
         btnFavorite     = findViewById(R.id.btnFavorite);
         btnDirections   = findViewById(R.id.btnDirections);
         btnBack         = findViewById(R.id.btnBack);
+        txtInactiveWarning = findViewById(R.id.txtInactiveWarning);
     }
 
     private void setupButtons() {
@@ -106,7 +108,14 @@ public class PlaceDetailActivity extends BaseActivity {
                     if (place != null) {
                         currentPlace = place;
                         renderPlace(place);
-                        checkFavoriteStatus();
+                        
+                        if (Boolean.FALSE.equals(documentSnapshot.getBoolean("isActive"))) {
+                            txtInactiveWarning.setVisibility(android.view.View.VISIBLE);
+                            btnFavorite.setVisibility(android.view.View.GONE);
+                        } else {
+                            checkFavoriteStatus();
+                        }
+                        
                         saveToHistory(placeId); // ghi lịch sử
                     }
                 })

@@ -363,12 +363,13 @@ public class FavoriteActivity extends BaseActivity {
                     .addOnSuccessListener(doc -> {
                         loaded[0]++;
                         if (doc.exists()) {
-                            com.example.nightlife_finder.models.Place p = doc.toObject(com.example.nightlife_finder.models.Place.class);
-                            if (p != null) {
-                                if (p.getId() == null || p.getId().isEmpty()) p.setId(doc.getId());
+                            if (!Boolean.FALSE.equals(doc.getBoolean("isActive"))) {
+                                com.example.nightlife_finder.models.Place p = doc.toObject(com.example.nightlife_finder.models.Place.class);
+                                if (p != null) {
+                                    if (p.getId() == null || p.getId().isEmpty()) p.setId(doc.getId());
 
-                                int imgRes = R.drawable.bar;
-                                if ("bunbo".equals(p.getImageUrl()))      imgRes = R.drawable.burger;
+                                    int imgRes = R.drawable.bar;
+                                    if ("bunbo".equals(p.getImageUrl()))      imgRes = R.drawable.burger;
                                 else if ("lau".equals(p.getImageUrl()))  imgRes = R.drawable.sushi;
                                 else if ("pizza".equals(p.getImageUrl())) imgRes = R.drawable.pizza;
                                 else if ("diner".equals(p.getImageUrl())) imgRes = R.drawable.diner;
@@ -383,6 +384,7 @@ public class FavoriteActivity extends BaseActivity {
                                         p.getId(), p.getCategory(), p.getAddress(),
                                         p.getOpenTime(), p.getImageUrl(), p.getLat(), p.getLng()
                                 ));
+                                }
                             }
                         }
                         if (loaded[0] >= total) {

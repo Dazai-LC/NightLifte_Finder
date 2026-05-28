@@ -262,7 +262,7 @@ public class MainActivity extends BaseActivity {
         et.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH
                     || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                openSearchResults(et.getText().toString().trim());
+                openSearchResults();
                 return true;
             }
             return false;
@@ -270,15 +270,29 @@ public class MainActivity extends BaseActivity {
 
         // Bấm vào ô tìm kiếm cũng mở luôn (UX nhanh)
         et.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) openSearchResults(et.getText().toString().trim());
+            if (hasFocus) {
+                openSearchResults();
+            }
+        });
+
+        // Hỗ trợ trường hợp đã có focus nhưng user bấm lại
+        et.setOnClickListener(v -> {
+            openSearchResults();
         });
     }
 
     /** Mở SearchResultsActivity với query (có thể rỗng) */
-    private void openSearchResults(String query) {
+    private void openSearchResults() {
+        EditText et = findViewById(R.id.etHomeSearch);
+        if (et == null) return;
+
+        String query = et.getText().toString().trim();
         Intent intent = new Intent(MainActivity.this, SearchResultsActivity.class);
-        intent.putExtra(SearchResultsActivity.EXTRA_SEARCH_QUERY, query);
+        if (!query.isEmpty()) {
+            intent.putExtra(SearchResultsActivity.EXTRA_SEARCH_QUERY, query);
+        }
         startActivity(intent);
+        et.clearFocus();
     }
 
     // -------------------------------------------------------

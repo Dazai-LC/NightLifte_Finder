@@ -174,6 +174,9 @@ public class SearchResultsActivity extends BaseActivity {
                 .addOnSuccessListener(querySnapshot -> {
                     allPlaces.clear();
                     for (QueryDocumentSnapshot doc : querySnapshot) {
+                        if (Boolean.FALSE.equals(doc.getBoolean("isActive"))) {
+                            continue;
+                        }
                         Place place = doc.toObject(Place.class);
                         // @DocumentId được set tự động khi toObject(), nhưng set thêm để chắc
                         if (place.getId() == null || place.getId().isEmpty()) {

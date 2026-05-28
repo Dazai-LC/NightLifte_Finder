@@ -147,6 +147,23 @@
 
         </LinearLayout>
 
+        <!-- INACTIVE WARNING -->
+        <TextView
+            android:id="@+id/txtInactiveWarning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginTop="16dp"
+            android:text="Địa điểm này hiện đang tạm khóa hoặc chưa được hiển thị."
+            android:textColor="#FF4D5A"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="12dp"
+            android:background="#33FF4D5A"
+            android:visibility="gone" />
+
         <!-- ACTION BUTTONS: Yêu thích + Chỉ đường -->
         <LinearLayout
             android:layout_width="match_parent"

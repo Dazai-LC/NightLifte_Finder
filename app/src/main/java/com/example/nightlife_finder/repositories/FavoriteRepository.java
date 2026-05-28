@@ -104,8 +104,10 @@ public class FavoriteRepository {
                     .get()
                     .addOnSuccessListener(doc -> {
                         if (doc.exists()) {
-                            Place place = doc.toObject(Place.class);
-                            if (place != null) result.add(place);
+                            if (!Boolean.FALSE.equals(doc.getBoolean("isActive"))) {
+                                Place place = doc.toObject(Place.class);
+                                if (place != null) result.add(place);
+                            }
                         }
                         remaining[0]--;
                         if (remaining[0] == 0) {
