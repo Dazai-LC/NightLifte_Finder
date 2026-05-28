@@ -53,6 +53,7 @@ public class ChatDetailActivity extends BaseActivity {
     // -------------------------------------------------------
     private String conversationId;   // null nếu là demo
     private ChatRepository chatRepository;
+    private com.example.nightlife_finder.models.Conversation currentConversation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,10 +105,11 @@ public class ChatDetailActivity extends BaseActivity {
             // Chế độ Firestore
             detailEmoji.setText("💬");
             detailName.setText("Cuộc trò chuyện");
-            detailStatus.setText("● Firestore");
+            detailStatus.setText("Đang tải...");
 
             // Ẩn messages hardcode, dùng container để load từ Firestore
             hideHardcodedMessages();
+            loadConversationMetadata();
             loadFirestoreMessages();
         } else {
             // Chế độ demo hardcode (giữ nguyên logic cũ)
@@ -130,6 +132,73 @@ public class ChatDetailActivity extends BaseActivity {
         t = findViewById(R.id.userTime2); if (t != null) t.setVisibility(android.view.View.GONE);
         t = findViewById(R.id.shopTime2); if (t != null) t.setVisibility(android.view.View.GONE);
         t = findViewById(R.id.timeLabel); if (t != null) t.setVisibility(android.view.View.GONE);
+    }
+
+    // -------------------------------------------------------
+    // Load conversation metadata từ Firestore
+    // -------------------------------------------------------
+    private void loadConversationMetadata() {
+        if (conversationId == null) return;
+        com.google.firebase.firestore.FirebaseFirestore db = com.example.nightlife_finder.firebase.FirebaseManager.getInstance().getFirestore();
+        db.collection(com.example.nightlife_finder.constants.FirebaseConstants.COLLECTION_CONVERSATIONS)
+            .document(conversationId)
+            .get()
+            .addOnSuccessListener(doc -> {
+                if (doc.exists()) {
+                    currentConversation = doc.toObject(com.example.nightlife_finder.models.Conversation.class);
+                    if (currentConversation != null) {
+                        updateHeaderWithMetadata();
+                    }
+                }
+            });
+    }
+
+    private void updateHeaderWithMetadata() {
+        if (currentConversation == null) return;
+
+        // 1. Primary Text (detailName)
+        String shopName = currentConversation.getShopName();
+        if (shopName == null || shopName.isEmpty()) {
+            shopName = currentConversation.getTitle();
+        }
+        if (shopName == null || shopName.isEmpty()) {
+            shopName = "Cuộc trò chuyện";
+        }
+        detailName.setText(shopName);
+
+        // 2. Avatar (detailEmoji)
+        String avatarText = currentConversation.getShopAvatarText();
+        if (avatarText == null || avatarText.isEmpty()) {
+            avatarText = categoryToEmoji(currentConversation.getShopCategory());
+        }
+        detailEmoji.setText(avatarText);
+
+        // 3. Subtitle (detailStatus)
+        String cat = currentConversation.getShopCategory();
+        String openTime = currentConversation.getOpenTime();
+        if (cat != null && !cat.isEmpty() && openTime != null && !openTime.isEmpty()) {
+            detailStatus.setText(cat + " • " + openTime);
+            detailStatus.setTextColor(Color.parseColor("#8A8A95"));
+        } else if (currentConversation.getAddress() != null && !currentConversation.getAddress().isEmpty() && !"Chưa có địa chỉ".equals(currentConversation.getAddress())) {
+            detailStatus.setText(currentConversation.getAddress());
+            detailStatus.setTextColor(Color.parseColor("#8A8A95"));
+        } else {
+            detailStatus.setText("Thông tin cập nhật...");
+            detailStatus.setTextColor(Color.parseColor("#8A8A95"));
+        }
+    }
+
+    private String categoryToEmoji(String category) {
+        if (category == null) return "💬";
+        switch (category.toLowerCase()) {
+            case "pizza": return "🍕";
+            case "lẩu": case "lau": return "🍲";
+            case "trà sữa": case "che": return "🧋";
+            case "nướng": case "bbq": return "🔥";
+            case "cơm": case "diner": return "🍚";
+            case "phở": case "bún bò": case "bunbo": return "🍜";
+            default: return "💬";
+        }
     }
 
     // -------------------------------------------------------
@@ -292,13 +361,44 @@ public class ChatDetailActivity extends BaseActivity {
         TextView sendBtn = findViewById(R.id.btnSendMessage);
         if (sendBtn != null) sendBtn.setOnClickListener(v -> handleSendMessage());
 
-        // Quick actions (toast demo)
-        safeClick(R.id.btnCallShop, "Demo gọi điện cho quán");
-        safeClick(R.id.btnVideoShop, "Demo gọi video cho quán");
-        safeClick(R.id.btnBooking, "Demo đặt bàn thành công");
-        safeClick(R.id.btnMenu, "Demo mở menu quán");
-        safeClick(R.id.btnDirection, "Demo chỉ đường tới quán");
-        safeClick(R.id.btnCallQuick, "Demo gọi nhanh cho quán");
+        // Quick actions
+        safeClick(R.id.btnCallShop, "Tính năng mở rộng");
+        safeClick(R.id.btnVideoShop, "Tính năng mở rộng");
+        safeClick(R.id.btnBooking, "Tính năng mở rộng");
+        safeClick(R.id.btnMenu, "Tính năng mở rộng");
+        safeClick(R.id.btnCallQuick, "Tính năng mở rộng");
+
+        android.view.View btnDir = findViewById(R.id.btnDirection);
+        if (btnDir != null) {
+            btnDir.setOnClickListener(v -> {
+                if (conversationId != null) {
+                    handleDirectionClick();
+                } else {
+                    Toast.makeText(this, "Demo chỉ đường tới quán", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private void handleDirectionClick() {
+        if (currentConversation != null) {
+            String address = currentConversation.getAddress();
+            String shopName = currentConversation.getShopName();
+            if (shopName == null || shopName.isEmpty()) shopName = currentConversation.getTitle();
+
+            if (address != null && !address.isEmpty() && !"Chưa có địa chỉ".equals(address)) {
+                String query = shopName != null ? shopName + " " + address : address;
+                android.net.Uri browserUri = android.net.Uri.parse("https://maps.google.com/?q=" + android.net.Uri.encode(query));
+                startActivity(new Intent(Intent.ACTION_VIEW, browserUri));
+            } else if (shopName != null && !shopName.isEmpty() && !"Cuộc trò chuyện".equals(shopName)) {
+                android.net.Uri browserUri = android.net.Uri.parse("https://maps.google.com/?q=" + android.net.Uri.encode(shopName));
+                startActivity(new Intent(Intent.ACTION_VIEW, browserUri));
+            } else {
+                Toast.makeText(this, "Chưa có dữ liệu chỉ đường cho cuộc trò chuyện này", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Chưa có dữ liệu chỉ đường", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void safeClick(int viewId, String toastMsg) {
