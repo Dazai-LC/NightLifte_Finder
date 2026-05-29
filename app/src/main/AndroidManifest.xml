@@ -18,6 +18,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NightLife_Finder">
         <activity
+            android:name=".activities.PlaceDetailActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.PlaceListActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
             android:name=".activities.EditProfileActivity"
             android:screenOrientation="portrait"
             android:exported="false" />

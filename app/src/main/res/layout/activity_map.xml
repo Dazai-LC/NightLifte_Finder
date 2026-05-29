@@ -127,7 +127,6 @@
                     android:textColor="@color/text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
-
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>
@@ -191,7 +190,7 @@
     <LinearLayout
         android:id="@+id/placeInfoCard"
         android:layout_width="match_parent"
-        android:layout_height="138dp"
+        android:layout_height="190dp"
         android:layout_gravity="bottom"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
@@ -256,6 +255,20 @@
                 android:text="Bấm marker để xem thông tin quán"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btnDirection"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/chip_active_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="🧭 Chỉ đường"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 

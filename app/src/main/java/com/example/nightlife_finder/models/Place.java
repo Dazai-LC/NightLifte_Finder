@@ -1,29 +1,41 @@
 package com.example.nightlife_finder.models;
 
 public class Place {
+    public String id;
+    public String name;
+    public String category;
+    public String type;
+    public String address;
+    public String openingHours;
+    public String dishTags;
+    public double latitude;
+    public double longitude;
+    public int nightScore;
+    public float rating;
 
-    private String name;
-    private String address;
-    private String imageUrl;
-    private float rating;
-
-    public Place() {
-    }
-
-    public Place(String name, String address,
-                 String imageUrl, float rating) {
-
+    public Place(
+            String id,
+            String name,
+            String category,
+            String type,
+            String address,
+            String openingHours,
+            String dishTags,
+            double latitude,
+            double longitude,
+            int nightScore,
+            float rating
+    ) {
+        this.id = id;
         this.name = name;
+        this.category = category;
+        this.type = type;
         this.address = address;
-        this.imageUrl = imageUrl;
+        this.openingHours = openingHours;
+        this.dishTags = dishTags;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.nightScore = nightScore;
         this.rating = rating;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }

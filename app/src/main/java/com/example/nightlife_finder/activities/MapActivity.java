@@ -1,10 +1,12 @@
 package com.example.nightlife_finder.activities;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,8 +33,6 @@ import java.util.Locale;
 
 public class MapActivity extends BaseActivity {
 
-    // Vị trí mặc định khi không lấy được GPS:
-    // 60 QL1A, Thường Tín, Hà Nội, Việt Nam
     private static final double DEFAULT_LAT = 20.8712;
     private static final double DEFAULT_LON = 105.8643;
 
@@ -41,16 +41,18 @@ public class MapActivity extends BaseActivity {
 
     private TextView placeEmoji, placeName, placeType, placeDistance, placeOpenTime;
     private TextView chipAll, chipFood, chipCafe, chipTea, chipStore, chipSupermarket;
+    private TextView btnDirection;
 
     private double userLat = DEFAULT_LAT;
     private double userLon = DEFAULT_LON;
 
     private String currentFilter = "all";
     private boolean focusUserAfterRender = false;
-
-    // true = đang dùng vị trí mặc định 60 QL1A
-    // false = đã lấy được vị trí hiện tại thật
+    private boolean shouldZoomSelectedAfterRender = false;
     private boolean isUsingDefaultLocation = true;
+
+    private DemoPlace targetPlaceFromHome = null;
+    private DemoPlace selectedPlace = null;
 
     private final List<DemoPlace> demoPlaces = new ArrayList<>();
 
@@ -77,9 +79,21 @@ public class MapActivity extends BaseActivity {
         setupBottomNavigation();
 
         createHaNoiDemoPlaces();
+        receivePlaceFromHome();
 
-        focusUserAfterRender = true;
-        requestLocationPermissionFirst();
+        if (targetPlaceFromHome != null) {
+            selectedPlace = targetPlaceFromHome;
+            focusUserAfterRender = false;
+            shouldZoomSelectedAfterRender = true;
+
+            showPlacesByFilter("all");
+            requestLocationPermissionFirst();
+        } else {
+            focusUserAfterRender = true;
+            shouldZoomSelectedAfterRender = false;
+
+            requestLocationPermissionFirst();
+        }
     }
 
     @Override
@@ -123,6 +137,8 @@ public class MapActivity extends BaseActivity {
         chipStore = findViewById(R.id.chipStore);
         chipSupermarket = findViewById(R.id.chipSupermarket);
 
+        btnDirection = findViewById(R.id.btnDirection);
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
@@ -130,13 +146,16 @@ public class MapActivity extends BaseActivity {
         osmMap.setTileSource(TileSourceFactory.MAPNIK);
         osmMap.setMultiTouchControls(true);
 
-        GeoPoint haNoiCenter = new GeoPoint(21.0285, 105.8542);
-        osmMap.getController().setZoom(11.7);
-        osmMap.getController().setCenter(haNoiCenter);
+        GeoPoint defaultCenter = new GeoPoint(DEFAULT_LAT, DEFAULT_LON);
+        osmMap.getController().setZoom(14.5);
+        osmMap.getController().setCenter(defaultCenter);
     }
 
     private void setupButtons() {
         findViewById(R.id.btnMyLocation).setOnClickListener(v -> {
+            targetPlaceFromHome = null;
+            selectedPlace = null;
+            shouldZoomSelectedAfterRender = false;
             focusUserAfterRender = true;
             requestLocationPermissionFirst();
         });
@@ -145,7 +164,7 @@ public class MapActivity extends BaseActivity {
             double zoom = osmMap.getZoomLevelDouble();
 
             if (zoom < 20) {
-                osmMap.getController().zoomTo(zoom + 1);
+                osmMap.getController().setZoom(zoom + 1);
             }
         });
 
@@ -153,13 +172,22 @@ public class MapActivity extends BaseActivity {
             double zoom = osmMap.getZoomLevelDouble();
 
             if (zoom > 3) {
-                osmMap.getController().zoomTo(zoom - 1);
+                osmMap.getController().setZoom(zoom - 1);
             }
         });
 
         findViewById(R.id.btnReloadPlaces).setOnClickListener(v -> {
             showPlacesByFilter(currentFilter);
             Toast.makeText(this, "Đã tải lại dữ liệu demo", Toast.LENGTH_SHORT).show();
+        });
+
+        btnDirection.setOnClickListener(v -> {
+            if (selectedPlace == null) {
+                Toast.makeText(this, "Bạn hãy chọn một quán trước", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            openGoogleMapDirection(selectedPlace);
         });
 
         chipAll.setOnClickListener(v -> chooseFilter("all", chipAll));
@@ -171,6 +199,11 @@ public class MapActivity extends BaseActivity {
     }
 
     private void chooseFilter(String filter, TextView activeChip) {
+        targetPlaceFromHome = null;
+        selectedPlace = null;
+        shouldZoomSelectedAfterRender = false;
+        focusUserAfterRender = false;
+
         currentFilter = filter;
         setActiveChip(activeChip);
         showPlacesByFilter(filter);
@@ -192,13 +225,15 @@ public class MapActivity extends BaseActivity {
             return;
         }
 
-        updatePlaceInfo(
-                "⌖",
-                "Đang lấy vị trí hiện tại...",
-                "GPS / Wi-Fi / mạng di động",
-                "Vui lòng chờ vài giây",
-                "Nếu GPS lỗi, app sẽ dùng vị trí 60 QL1A Thường Tín"
-        );
+        if (selectedPlace == null) {
+            updatePlaceInfo(
+                    "⌖",
+                    "Đang lấy vị trí hiện tại...",
+                    "GPS / Wi-Fi / mạng di động",
+                    "Vui lòng chờ vài giây",
+                    "Nếu GPS lỗi, app sẽ dùng vị trí mặc định"
+            );
+        }
 
         CancellationTokenSource tokenSource = new CancellationTokenSource();
 
@@ -210,16 +245,18 @@ public class MapActivity extends BaseActivity {
                         userLon = location.getLongitude();
 
                         isUsingDefaultLocation = false;
-                        focusUserAfterRender = true;
+
                         showPlacesByFilter(currentFilter);
 
-                        updatePlaceInfo(
-                                "📍",
-                                "Vị trí hiện tại",
-                                "GPS đã xác nhận vị trí của bạn",
-                                "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
-                                "Đang hiển thị địa điểm gần khu vực của bạn"
-                        );
+                        if (selectedPlace == null && focusUserAfterRender) {
+                            updatePlaceInfo(
+                                    "📍",
+                                    "Vị trí hiện tại",
+                                    "GPS đã xác nhận vị trí của bạn",
+                                    "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
+                                    "Đang hiển thị địa điểm gần khu vực của bạn"
+                            );
+                        }
 
                         Toast.makeText(this, "Đã lấy vị trí hiện tại", Toast.LENGTH_SHORT).show();
                     } else {
@@ -243,16 +280,18 @@ public class MapActivity extends BaseActivity {
                         userLon = location.getLongitude();
 
                         isUsingDefaultLocation = false;
-                        focusUserAfterRender = true;
+
                         showPlacesByFilter(currentFilter);
 
-                        updatePlaceInfo(
-                                "📍",
-                                "Vị trí hiện tại",
-                                "Đã lấy vị trí gần nhất của bạn",
-                                "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
-                                "Đang hiển thị địa điểm gần khu vực của bạn"
-                        );
+                        if (selectedPlace == null && focusUserAfterRender) {
+                            updatePlaceInfo(
+                                    "📍",
+                                    "Vị trí hiện tại",
+                                    "Đã lấy vị trí gần nhất của bạn",
+                                    "Tọa độ: " + String.format(Locale.US, "%.5f, %.5f", userLat, userLon),
+                                    "Đang hiển thị địa điểm gần khu vực của bạn"
+                            );
+                        }
 
                         Toast.makeText(this, "Đã lấy vị trí gần nhất", Toast.LENGTH_SHORT).show();
                     } else {
@@ -278,20 +317,22 @@ public class MapActivity extends BaseActivity {
         userLon = DEFAULT_LON;
 
         isUsingDefaultLocation = true;
-        focusUserAfterRender = true;
+
         showPlacesByFilter(currentFilter);
 
-        updatePlaceInfo(
-                "📍",
-                "Vị trí hiện tại",
-                "60 QL1A, Thường Tín, Hà Nội",
-                "Việt Nam",
-                reason
-        );
+        if (selectedPlace == null && focusUserAfterRender) {
+            updatePlaceInfo(
+                    "📍",
+                    "Vị trí mặc định",
+                    "60 QL1A, Thường Tín, Hà Nội",
+                    "Việt Nam",
+                    reason
+            );
+        }
 
         Toast.makeText(
                 this,
-                "Không lấy được GPS, dùng vị trí 60 QL1A Thường Tín",
+                "Không lấy được GPS, dùng vị trí mặc định",
                 Toast.LENGTH_SHORT
         ).show();
     }
@@ -299,132 +340,119 @@ public class MapActivity extends BaseActivity {
     private void zoomToUserLocation() {
         GeoPoint userPoint = new GeoPoint(userLat, userLon);
 
-        osmMap.getController().animateTo(userPoint);
-        osmMap.getController().zoomTo(16.5);
+        osmMap.post(() -> {
+            osmMap.getController().setZoom(16.5);
+            osmMap.getController().setCenter(userPoint);
+            osmMap.invalidate();
+        });
+    }
+
+    private void receivePlaceFromHome() {
+        String name = getIntent().getStringExtra("target_name");
+
+        if (name == null || name.trim().isEmpty()) {
+            return;
+        }
+
+        String category = getIntent().getStringExtra("target_category");
+        String type = getIntent().getStringExtra("target_type");
+        String address = getIntent().getStringExtra("target_address");
+        String openingHours = getIntent().getStringExtra("target_opening_hours");
+
+        double latitude = getIntent().getDoubleExtra("target_latitude", DEFAULT_LAT);
+        double longitude = getIntent().getDoubleExtra("target_longitude", DEFAULT_LON);
+        int nightScore = getIntent().getIntExtra("target_night_score", 80);
+
+        if (category == null || category.trim().isEmpty()) {
+            category = "food";
+        }
+
+        if (type == null || type.trim().isEmpty()) {
+            type = "Địa điểm";
+        }
+
+        if (address == null || address.trim().isEmpty()) {
+            address = "Hà Nội";
+        }
+
+        if (openingHours == null || openingHours.trim().isEmpty()) {
+            openingHours = "Đang cập nhật";
+        }
+
+        targetPlaceFromHome = new DemoPlace(
+                name,
+                category,
+                type,
+                address,
+                openingHours,
+                latitude,
+                longitude,
+                nightScore
+        );
+
+        selectedPlace = targetPlaceFromHome;
+        addOrReplacePlace(targetPlaceFromHome);
+
+        currentFilter = "all";
+
+        if (chipAll != null) {
+            setActiveChip(chipAll);
+        }
+    }
+
+    private void addOrReplacePlace(DemoPlace newPlace) {
+        for (int i = 0; i < demoPlaces.size(); i++) {
+            DemoPlace oldPlace = demoPlaces.get(i);
+
+            if (oldPlace.name.equalsIgnoreCase(newPlace.name)) {
+                demoPlaces.set(i, newPlace);
+                return;
+            }
+        }
+
+        demoPlaces.add(newPlace);
     }
 
     private void createHaNoiDemoPlaces() {
         demoPlaces.clear();
 
-        // HOÀN KIẾM
-        add("Bún Bò Cô Hoa Phố Cổ", "food", "Quán ăn / Bún bò", "Gần phố Hàng Bạc, Hoàn Kiếm, Hà Nội", "Mở 18:00 - 02:30", 21.0347, 105.8521, 92);
-        add("Phở Gà Chú Tùng Hàng Đào", "food", "Quán ăn / Phở", "Khu Hàng Đào, Hoàn Kiếm, Hà Nội", "Mở 19:00 - 03:00", 21.0332, 105.8510, 94);
-        add("Cà Phê Ven Hồ", "cafe", "Cafe / View hồ", "Gần Hồ Hoàn Kiếm, Hà Nội", "Mở 07:00 - 01:00", 21.0287, 105.8529, 88);
-        add("Trà Sữa Mây Hồng Phố Cổ", "tea", "Trà sữa / Đồ uống", "Khu phố cổ Hoàn Kiếm, Hà Nội", "Mở 24/7", 21.0315, 105.8502, 100);
-        add("Tiệm Tiện Lợi Minh Anh", "store", "Cửa hàng tiện lợi", "Phố Hàng Bạc, Hoàn Kiếm, Hà Nội", "Mở 24/7", 21.0340, 105.8537, 100);
-        add("Chợ Mini Tràng Tiền", "supermarket", "Siêu thị mini", "Khu Tràng Tiền, Hoàn Kiếm, Hà Nội", "Mở 08:00 - 23:00", 21.0252, 105.8568, 62);
+        add("Mì Cay Seoul", "food", "Quán ăn / Mì cay", "Khu trung tâm Thường Tín, Hà Nội", "Mở 17:00 - 02:00", 20.8729, 105.8648, 91);
+        add("Bún Đậu", "food", "Quán ăn / Bún đậu", "Khu thị trấn Thường Tín, Hà Nội", "Mở 16:00 - 00:30", 20.8710, 105.8617, 84);
+        add("Xôi Gà", "food", "Quán ăn / Xôi gà", "Gần Quốc lộ 1A, Thường Tín, Hà Nội", "Mở 20:00 - 04:00", 20.8694, 105.8649, 93);
+        add("Gà Rán", "food", "Quán ăn / Gà rán", "Khu trung tâm Thường Tín, Hà Nội", "Mở 10:00 - 01:00", 20.8708, 105.8668, 85);
+        add("Mì Xào Bò Thanh Nghị", "food", "Quán ăn / Mì xào", "Khu phố ga Thường Tín, Hà Nội", "Mở 17:00 - 01:30", 20.8689, 105.8609, 87);
+        add("Bánh Tráng Trộn", "food", "Ăn vặt / Bánh tráng", "Khu trung tâm Thường Tín, Hà Nội", "Mở 15:00 - 01:00", 20.8721, 105.8631, 83);
+        add("Bún Bò Huế", "food", "Quán ăn / Bún bò", "Khu Hà Hồi, Thường Tín, Hà Nội", "Mở 18:00 - 02:00", 20.8586, 105.8555, 88);
+        add("Lola Tea", "tea", "Trà chanh / Đồ uống đêm", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 15:00 - 01:30", 20.8864, 105.8556, 82);
+        add("Ốc Sốt Cay", "food", "Quán ăn / Hải sản ốc", "Khu trung tâm Thường Tín, Hà Nội", "Mở 17:00 - 02:30", 20.8735, 105.8657, 90);
+        add("Cơm Tấm", "food", "Quán ăn / Cơm tấm", "Gần 60 QL1A, Thường Tín, Hà Nội", "Mở 18:00 - 01:00", 20.8702, 105.8639, 86);
 
-        // BA ĐÌNH
-        add("Bún Chả Cô Hạnh Kim Mã", "food", "Quán ăn / Bún chả", "Khu Kim Mã, Ba Đình, Hà Nội", "Mở 10:00 - 23:00", 21.0311, 105.8181, 70);
-        add("Lẩu Nhà Gió Giảng Võ", "food", "Quán ăn / Lẩu", "Khu Giảng Võ, Ba Đình, Hà Nội", "Mở 16:00 - 02:00", 21.0258, 105.8246, 86);
-        add("Cà Phê Trúc Bạch Xưa", "cafe", "Cafe / Chill", "Gần hồ Trúc Bạch, Ba Đình, Hà Nội", "Mở 07:00 - 00:30", 21.0450, 105.8412, 82);
-        add("Trà Chanh Góc Ngọc Hà", "tea", "Trà chanh / Đồ uống", "Khu Ngọc Hà, Ba Đình, Hà Nội", "Mở 15:00 - 01:30", 21.0372, 105.8282, 84);
-        add("Siêu Thị Nhỏ Liễu Giai", "supermarket", "Siêu thị mini", "Khu Liễu Giai, Ba Đình, Hà Nội", "Mở 08:00 - 23:00", 21.0346, 105.8125, 60);
-
-        // ĐỐNG ĐA
-        add("Mì Vằn Thắn Gia Khang", "food", "Quán ăn / Mì", "Khu Thái Hà, Đống Đa, Hà Nội", "Mở 18:00 - 01:30", 21.0145, 105.8219, 83);
-        add("Xôi Gà Cô Lan Chùa Bộc", "food", "Quán ăn / Xôi", "Khu Chùa Bộc, Đống Đa, Hà Nội", "Mở 20:00 - 03:00", 21.0079, 105.8282, 93);
-        add("Cà Phê Góc Học Bài", "cafe", "Cafe / Học tập", "Khu Nguyễn Trãi, Đống Đa, Hà Nội", "Mở 08:00 - 00:00", 21.0024, 105.8208, 76);
-        add("Trà Hoa Quả Nắng Mai", "tea", "Trà hoa quả / Đồ uống", "Khu Tây Sơn, Đống Đa, Hà Nội", "Mở 09:00 - 01:00", 21.0115, 105.8327, 84);
-        add("Cửa Hàng Tiện Lợi An Nhiên", "store", "Cửa hàng tiện lợi", "Khu Thái Hà, Đống Đa, Hà Nội", "Mở 24/7", 21.0137, 105.8192, 100);
-
-        // HAI BÀ TRƯNG
-        add("Cơm Tấm Anh Ba Bạch Mai", "food", "Quán ăn / Cơm tấm", "Khu Bạch Mai, Hai Bà Trưng, Hà Nội", "Mở 17:00 - 02:00", 21.0016, 105.8508, 88);
-        add("Phở Đêm Minh Khai", "food", "Quán ăn / Phở", "Khu Minh Khai, Hai Bà Trưng, Hà Nội", "Mở 19:00 - 03:30", 20.9962, 105.8604, 95);
-        add("Cà Phê Sân Nhỏ", "cafe", "Cafe / Văn phòng", "Khu Đại Cồ Việt, Hai Bà Trưng, Hà Nội", "Mở 07:00 - 23:30", 21.0082, 105.8469, 66);
-        add("Trà Sữa Bé Gấu Bạch Mai", "tea", "Trà sữa / Đồ uống", "Khu Bạch Mai, Hai Bà Trưng, Hà Nội", "Mở 09:00 - 00:30", 21.0004, 105.8483, 78);
-
-        // CẦU GIẤY
-        add("Quán Nướng Chú Mạnh", "food", "Quán ăn / Đồ nướng", "Khu Cầu Giấy, Hà Nội", "Mở 17:00 - 01:00", 21.0364, 105.7902, 84);
-        add("Bún Bò Cô Mai Duy Tân", "food", "Quán ăn / Bún bò", "Khu Duy Tân, Cầu Giấy, Hà Nội", "Mở 18:00 - 02:00", 21.0305, 105.7849, 89);
-        add("Cà Phê Lá Xanh", "cafe", "Cafe / Làm việc", "Khu Dịch Vọng, Cầu Giấy, Hà Nội", "Mở 07:00 - 01:00", 21.0330, 105.7938, 86);
-        add("Trà Sữa Mộc Xuân Thủy", "tea", "Trà sữa / Đồ uống", "Khu Xuân Thủy, Cầu Giấy, Hà Nội", "Mở 09:00 - 00:30", 21.0377, 105.7825, 80);
-        add("Siêu Thị Mini An Phát", "supermarket", "Siêu thị mini", "Khu Cầu Giấy, Hà Nội", "Mở 08:00 - 23:00", 21.0319, 105.7982, 60);
-
-        // THANH XUÂN
-        add("Lẩu Đêm Bếp Nhà", "food", "Quán ăn / Lẩu", "Khu Nguyễn Trãi, Thanh Xuân, Hà Nội", "Mở 16:00 - 02:00", 20.9955, 105.8062, 87);
-        add("Cà Phê Gác Nhỏ", "cafe", "Cafe / Trung tâm thương mại", "Khu Royal City, Thanh Xuân, Hà Nội", "Mở 08:00 - 23:30", 21.0028, 105.8155, 68);
-        add("Chợ Thực Phẩm Thanh Xuân", "supermarket", "Siêu thị thực phẩm", "Khu Thanh Xuân, Hà Nội", "Mở 07:00 - 00:00", 20.9896, 105.8121, 76);
-
-        // HÀ ĐÔNG
-        add("Bún Đêm Cô Thảo Văn Quán", "food", "Quán ăn / Bún", "Khu Văn Quán, Hà Đông, Hà Nội", "Mở 18:00 - 01:00", 20.9790, 105.7892, 80);
-        add("Cà Phê Mỗ Lao Corner", "cafe", "Cafe / Khu đô thị", "Khu Mỗ Lao, Hà Đông, Hà Nội", "Mở 07:00 - 00:30", 20.9638, 105.7704, 78);
-        add("Tiệm Tiện Lợi Hà Đông", "store", "Cửa hàng tiện lợi", "Khu Hà Đông, Hà Nội", "Mở 24/7", 20.9556, 105.7559, 100);
-        add("Siêu Thị Nhỏ Văn Phú", "supermarket", "Siêu thị mini", "Khu Văn Phú, Hà Đông, Hà Nội", "Mở 08:00 - 23:00", 20.9700, 105.7607, 63);
-
-        // TÂY HỒ
-        add("Cà Phê Gió Hồ Tây", "cafe", "Cafe / View hồ", "Khu Hồ Tây, Hà Nội", "Mở 07:00 - 01:00", 21.0583, 105.8248, 87);
-        add("Trà Chanh Ven Hồ", "tea", "Trà chanh / Đồ uống", "Khu Tây Hồ, Hà Nội", "Mở 15:00 - 02:00", 21.0645, 105.8120, 89);
-        add("Pizza Đêm Nhà Gạch", "food", "Quán ăn / Pizza", "Khu Tây Hồ, Hà Nội", "Mở 11:00 - 00:30", 21.0701, 105.8345, 78);
-
-        // NAM TỪ LIÊM
-        add("Lẩu Mễ Trì Cô Hương", "food", "Quán ăn / Lẩu", "Khu Mễ Trì, Nam Từ Liêm, Hà Nội", "Mở 16:00 - 02:30", 21.0068, 105.7801, 90);
-        add("Cà Phê Tòa Nhà", "cafe", "Cafe / Văn phòng", "Khu Keangnam, Nam Từ Liêm, Hà Nội", "Mở 07:00 - 00:00", 21.0179, 105.7841, 75);
-        add("Mini Mart Mỹ Đình", "store", "Cửa hàng tiện lợi", "Khu Mỹ Đình, Nam Từ Liêm, Hà Nội", "Mở 24/7", 21.0284, 105.7707, 100);
-
-        // LONG BIÊN
-        add("Phở Đêm Bên Cầu", "food", "Quán ăn / Phở", "Khu Long Biên, Hà Nội", "Mở 18:00 - 02:00", 21.0431, 105.8903, 86);
-        add("Cà Phê Bờ Sông", "cafe", "Cafe / Ven sông", "Khu Long Biên, Hà Nội", "Mở 07:00 - 00:00", 21.0532, 105.9101, 74);
-        add("Chợ Thực Phẩm Long Biên", "supermarket", "Siêu thị thực phẩm", "Khu Long Biên, Hà Nội", "Mở 07:00 - 23:30", 21.0309, 105.8754, 68);
-
-        // HOÀNG MAI
-        add("Bún Ngan Cô Lý Linh Đàm", "food", "Quán ăn / Bún ngan", "Khu Linh Đàm, Hoàng Mai, Hà Nội", "Mở 18:00 - 02:00", 20.9702, 105.8352, 86);
-        add("Trà Sữa Gấu Nâu Hoàng Mai", "tea", "Trà sữa / Đồ uống", "Khu Hoàng Mai, Hà Nội", "Mở 09:00 - 00:00", 20.9860, 105.8503, 74);
-        add("Tiệm Tiện Lợi Giải Phóng", "store", "Cửa hàng tiện lợi", "Khu Giải Phóng, Hoàng Mai, Hà Nội", "Mở 24/7", 20.9801, 105.8651, 100);
-
-        // ĐÔNG ANH
-        add("Bún Đêm Vân Trì", "food", "Quán ăn / Bún", "Gần CTECH, Vân Trì, Đông Anh, Hà Nội", "Mở 17:00 - 00:30", 21.1392, 105.8486, 72);
-        add("Cà Phê Sân Trường", "cafe", "Cafe / Sinh viên", "Gần CTECH, Đông Anh, Hà Nội", "Mở 07:00 - 23:00", 21.1405, 105.8464, 65);
-        add("Trà Sữa Cổng Trường", "tea", "Trà sữa / Đồ uống", "Gần CTECH, Đông Anh, Hà Nội", "Mở 09:00 - 23:30", 21.1385, 105.8499, 70);
-        add("Tạp Hóa Cô Nga", "store", "Cửa hàng tiện lợi", "Gần CTECH, Đông Anh, Hà Nội", "Mở 06:00 - 23:00", 21.1409, 105.8481, 58);
-
-        // THANH TRÌ
-        add("Phở Đêm Văn Điển", "food", "Quán ăn / Phở", "Khu thị trấn Văn Điển, Thanh Trì, Hà Nội", "Mở 18:00 - 02:00", 20.9462, 105.8468, 86);
-        add("Bún Bò Cô Sáu Ngọc Hồi", "food", "Quán ăn / Bún bò", "Khu Ngọc Hồi, Thanh Trì, Hà Nội", "Mở 17:30 - 01:30", 20.9249, 105.8494, 84);
-        add("Cơm Rang Tứ Hiệp", "food", "Quán ăn / Cơm rang", "Khu Tứ Hiệp, Thanh Trì, Hà Nội", "Mở 16:00 - 01:00", 20.9528, 105.8499, 80);
-        add("Lẩu Nhà Cô Hằng", "food", "Quán ăn / Lẩu", "Khu Thanh Liệt, Thanh Trì, Hà Nội", "Mở 16:00 - 02:30", 20.9625, 105.8146, 88);
-        add("Bánh Mì Chảo Yên Xá", "food", "Quán ăn / Bánh mì", "Khu Yên Xá, Thanh Trì, Hà Nội", "Mở 07:00 - 23:30", 20.9554, 105.8108, 68);
-        add("Quán Nướng Đại Áng", "food", "Quán ăn / Đồ nướng", "Khu Đại Áng, Thanh Trì, Hà Nội", "Mở 17:00 - 01:30", 20.9218, 105.8355, 82);
-
-        add("Cà Phê Gió Văn Điển", "cafe", "Cafe / Làm việc", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 07:00 - 00:00", 20.9474, 105.8446, 74);
-        add("Cà Phê Đường Ngọc Hồi", "cafe", "Cafe / Gặp bạn bè", "Khu Ngọc Hồi, Thanh Trì, Hà Nội", "Mở 07:00 - 23:30", 20.9288, 105.8509, 70);
-        add("Coffee Đèn Vàng Tứ Hiệp", "cafe", "Cafe / Đồ uống đêm", "Khu Tứ Hiệp, Thanh Trì, Hà Nội", "Mở 08:00 - 01:00", 20.9546, 105.8480, 82);
-
-        add("Trà Sữa Mây Trắng Văn Điển", "tea", "Trà sữa / Đồ uống", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 24/7", 20.9451, 105.8479, 100);
-        add("Trà Chanh Cây Bàng", "tea", "Trà chanh / Đồ uống", "Khu Ngọc Hồi, Thanh Trì, Hà Nội", "Mở 15:00 - 01:00", 20.9234, 105.8507, 83);
-        add("Trà Hoa Quả Tứ Hiệp", "tea", "Trà hoa quả / Đồ uống", "Khu Tứ Hiệp, Thanh Trì, Hà Nội", "Mở 09:00 - 00:30", 20.9519, 105.8516, 78);
-
-        add("Tiệm Tiện Lợi Văn Điển", "store", "Cửa hàng tiện lợi", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 24/7", 20.9469, 105.8431, 100);
-        add("Tạp Hóa Ngọc Hồi 24h", "store", "Cửa hàng tiện lợi", "Khu Ngọc Hồi, Thanh Trì, Hà Nội", "Mở 24/7", 20.9276, 105.8488, 100);
-        add("Cửa Hàng Tứ Hiệp", "store", "Cửa hàng tiện lợi", "Khu Tứ Hiệp, Thanh Trì, Hà Nội", "Mở 06:00 - 23:30", 20.9532, 105.8522, 62);
-
-        add("Siêu Thị Mini Văn Điển", "supermarket", "Siêu thị mini", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 08:00 - 23:00", 20.9440, 105.8455, 64);
-        add("Chợ Thực Phẩm Thanh Trì", "supermarket", "Siêu thị thực phẩm", "Khu Thanh Trì, Hà Nội", "Mở 07:00 - 23:30", 20.9507, 105.8384, 70);
-        add("Siêu Thị Nhỏ Ngọc Hồi", "supermarket", "Siêu thị mini", "Khu Ngọc Hồi, Thanh Trì, Hà Nội", "Mở 08:00 - 22:30", 20.9258, 105.8526, 58);
-
-        // THƯỜNG TÍN
-        add("Phở Đêm Quốc Lộ 1A", "food", "Quán ăn / Phở", "Khu thị trấn Thường Tín, Hà Nội", "Mở 18:00 - 02:00", 20.8696, 105.8618, 86);
-        add("Bún Bò Chị Hương Quất Động", "food", "Quán ăn / Bún bò", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 17:30 - 01:00", 20.8876, 105.8537, 80);
-        add("Cơm Rang Anh Tú", "food", "Quán ăn / Cơm rang", "Khu trung tâm Thường Tín, Hà Nội", "Mở 16:00 - 01:30", 20.8709, 105.8650, 84);
-        add("Lẩu Khuya Hà Hồi", "food", "Quán ăn / Lẩu", "Khu Hà Hồi, Thường Tín, Hà Nội", "Mở 16:00 - 02:00", 20.8586, 105.8555, 85);
-        add("Bánh Mì Chảo Ninh Sở", "food", "Quán ăn / Bánh mì", "Khu Ninh Sở, Thường Tín, Hà Nội", "Mở 07:00 - 23:00", 20.8396, 105.8751, 62);
-        add("Quán Nướng Vân Tảo", "food", "Quán ăn / Đồ nướng", "Khu Vân Tảo, Thường Tín, Hà Nội", "Mở 17:00 - 01:00", 20.8915, 105.8693, 80);
+        add("Phở Gà 24H", "food", "Quán ăn / Phở gà", "Khu trung tâm Thường Tín, Hà Nội", "Mở 18:00 - 03:00", 20.8712, 105.8643, 92);
+        add("Bánh Mì Chảo Cô Ba", "food", "Quán ăn / Bánh mì chảo", "Khu thị trấn Thường Tín, Hà Nội", "Mở 17:00 - 01:30", 20.8705, 105.8628, 88);
+        add("Cơm Rang Dưa bò cô Thanh", "food", "Quán ăn / Cơm rang", "Gần Quốc lộ 1A, Thường Tín, Hà Nội", "Mở 18:00 - 02:00", 20.8724, 105.8661, 86);
+        add("Lẩu Bò Neon", "food", "Quán ăn / Lẩu bò", "Khu Vân Tảo, Thường Tín, Hà Nội", "Mở 17:00 - 03:30", 20.8915, 105.8693, 94);
+        add("Bạch Tuộc Nướng", "food", "Quán ăn / Hải sản nướng", "Khu trung tâm Thường Tín, Hà Nội", "Mở 18:00 - 01:00", 20.8732, 105.8619, 90);
+        add("Burger Velocity", "food", "Quán ăn / Burger", "Gần ga Thường Tín, Hà Nội", "Mở 10:00 - 00:30", 20.8698, 105.8604, 82);
+        add("Cháo Sườn Starlight", "food", "Quán ăn / Cháo sườn", "Khu thị trấn Thường Tín, Hà Nội", "Mở 17:00 - 02:00", 20.8718, 105.8625, 89);
+        add("Pizza Crimson", "food", "Quán ăn / Pizza", "Khu trung tâm Thường Tín, Hà Nội", "Mở 10:00 - 00:30", 20.8704, 105.8661, 80);
+        add("Sushi Tokyo", "food", "Quán ăn / Sushi", "Khu trung tâm Thường Tín, Hà Nội", "Mở 17:00 - 00:30", 20.8724, 105.8628, 84);
+        add("Lẩu Đêm Neon", "food", "Quán ăn / Lẩu đêm", "Khu Vân Tảo, Thường Tín, Hà Nội", "Mở 17:00 - 03:30", 20.8915, 105.8693, 95);
 
         add("Cà Phê Phố Huyện", "cafe", "Cafe / Gặp bạn bè", "Khu thị trấn Thường Tín, Hà Nội", "Mở 07:00 - 00:00", 20.8718, 105.8625, 72);
-        add("Cà Phê Quất Động", "cafe", "Cafe / Làm việc", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 07:00 - 23:30", 20.8891, 105.8525, 66);
         add("Cà Phê Hà Hồi Đêm", "cafe", "Cafe / Đồ uống đêm", "Khu Hà Hồi, Thường Tín, Hà Nội", "Mở 08:00 - 00:30", 20.8599, 105.8568, 76);
+        add("Coffee Đèn Vàng Tứ Hiệp", "cafe", "Cafe / Chill đêm", "Khu Tứ Hiệp, Thanh Trì, Hà Nội", "Mở 08:00 - 01:00", 20.9546, 105.8480, 82);
 
         add("Trà Sữa Bông Mây", "tea", "Trà sữa / Đồ uống", "Khu trung tâm Thường Tín, Hà Nội", "Mở 24/7", 20.8701, 105.8604, 100);
         add("Trà Chanh Quất Động", "tea", "Trà chanh / Đồ uống", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 15:00 - 01:00", 20.8864, 105.8556, 82);
-        add("Trà Hoa Quả Ninh Sở", "tea", "Trà hoa quả / Đồ uống", "Khu Ninh Sở, Thường Tín, Hà Nội", "Mở 09:00 - 23:30", 20.8408, 105.8729, 65);
+        add("Trà Sữa Mây Trắng Văn Điển", "tea", "Trà sữa / Đồ uống", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 24/7", 20.9451, 105.8479, 100);
 
-        add("Tiệm Tiện Lợi Quốc Lộ 1A", "store", "Cửa hàng tiện lợi", "Khu thị trấn Thường Tín, Hà Nội", "Mở 24/7", 20.8712, 105.8643, 100);
+        add("Tiệm Tiện Lợi Quốc Lộ 1A", "store", "Cửa hàng tiện lợi", "60 QL1A, Thường Tín, Hà Nội", "Mở 24/7", 20.8712, 105.8643, 100);
         add("Tạp Hóa Quất Động 24h", "store", "Cửa hàng tiện lợi", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 24/7", 20.8883, 105.8549, 100);
-        add("Cửa Hàng Hà Hồi", "store", "Cửa hàng tiện lợi", "Khu Hà Hồi, Thường Tín, Hà Nội", "Mở 06:00 - 23:00", 20.8578, 105.8576, 60);
+        add("Tiệm Tiện Lợi Văn Điển", "store", "Cửa hàng tiện lợi", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 24/7", 20.9469, 105.8431, 100);
 
         add("Siêu Thị Mini Thường Tín", "supermarket", "Siêu thị mini", "Khu trung tâm Thường Tín, Hà Nội", "Mở 08:00 - 23:00", 20.8690, 105.8637, 64);
         add("Chợ Thực Phẩm Quất Động", "supermarket", "Siêu thị thực phẩm", "Khu Quất Động, Thường Tín, Hà Nội", "Mở 07:00 - 23:30", 20.8869, 105.8515, 68);
-        add("Siêu Thị Nhỏ Ninh Sở", "supermarket", "Siêu thị mini", "Khu Ninh Sở, Thường Tín, Hà Nội", "Mở 08:00 - 22:30", 20.8417, 105.8744, 56);
+        add("Siêu Thị Mini Văn Điển", "supermarket", "Siêu thị mini", "Khu Văn Điển, Thanh Trì, Hà Nội", "Mở 08:00 - 23:00", 20.9440, 105.8455, 64);
     }
 
     private void add(
@@ -465,17 +493,28 @@ public class MapActivity extends BaseActivity {
 
         osmMap.invalidate();
 
+        if (selectedPlace != null && shouldZoomSelectedAfterRender) {
+            zoomToPlace(selectedPlace);
+            shouldZoomSelectedAfterRender = false;
+
+            Toast.makeText(
+                    this,
+                    "Đã mở bản đồ tới: " + selectedPlace.name,
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
+
         if (focusUserAfterRender) {
             zoomToUserLocation();
             focusUserAfterRender = false;
-        } else {
-            if (filter.equals("all")) {
-                osmMap.getController().animateTo(new GeoPoint(21.0350, 105.8350));
-                osmMap.getController().zoomTo(11.7);
-            } else {
-                osmMap.getController().animateTo(new GeoPoint(21.0285, 105.8542));
-                osmMap.getController().zoomTo(12.4);
-            }
+            return;
+        }
+
+        if (selectedPlace != null) {
+            updateSelectedPlaceInfo(selectedPlace);
+            return;
         }
 
         updatePlaceInfo(
@@ -483,7 +522,7 @@ public class MapActivity extends BaseActivity {
                 "Đang hiển thị " + count + " địa điểm",
                 "Bộ lọc: " + getFilterName(filter),
                 "Dữ liệu demo có địa chỉ, giờ mở cửa, điểm đi đêm",
-                "Bấm marker để zoom tới địa điểm"
+                "Bấm marker để xem thông tin và chỉ đường"
         );
     }
 
@@ -495,7 +534,7 @@ public class MapActivity extends BaseActivity {
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
 
         if (isUsingDefaultLocation) {
-            marker.setTitle("Vị trí hiện tại");
+            marker.setTitle("Vị trí mặc định");
             marker.setSnippet("60 QL1A, Thường Tín, Hà Nội, Việt Nam");
         } else {
             marker.setTitle("Vị trí hiện tại");
@@ -511,12 +550,19 @@ public class MapActivity extends BaseActivity {
         Marker marker = new Marker(osmMap);
         marker.setPosition(point);
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+
         marker.setTitle(place.name);
-        marker.setSnippet(place.type);
+        marker.setSnippet(place.type + " • " + place.openingHours);
 
         marker.setOnMarkerClickListener((m, mapView) -> {
+            targetPlaceFromHome = null;
+            selectedPlace = place;
+            shouldZoomSelectedAfterRender = false;
+            focusUserAfterRender = false;
+
             zoomToPlace(place);
             m.showInfoWindow();
+
             return true;
         });
 
@@ -524,11 +570,26 @@ public class MapActivity extends BaseActivity {
     }
 
     private void zoomToPlace(DemoPlace place) {
+        selectedPlace = place;
+
         GeoPoint point = new GeoPoint(place.latitude, place.longitude);
 
-        osmMap.getController().animateTo(point);
-        osmMap.getController().zoomTo(18.5);
+        osmMap.post(() -> {
+            osmMap.getController().setZoom(18.5);
+            osmMap.getController().setCenter(point);
+            osmMap.invalidate();
+        });
 
+        osmMap.postDelayed(() -> {
+            osmMap.getController().setZoom(18.5);
+            osmMap.getController().setCenter(point);
+            osmMap.invalidate();
+        }, 300);
+
+        updateSelectedPlaceInfo(place);
+    }
+
+    private void updateSelectedPlaceInfo(DemoPlace place) {
         double distance = calculateDistance(place.latitude, place.longitude);
 
         String distanceText;
@@ -570,6 +631,35 @@ public class MapActivity extends BaseActivity {
         );
 
         return results[0];
+    }
+
+    private void openGoogleMapDirection(DemoPlace place) {
+        Uri googleMapUri = Uri.parse(
+                "google.navigation:q="
+                        + place.latitude
+                        + ","
+                        + place.longitude
+                        + "&mode=d"
+        );
+
+        Intent googleMapIntent = new Intent(Intent.ACTION_VIEW, googleMapUri);
+        googleMapIntent.setPackage("com.google.android.apps.maps");
+
+        try {
+            startActivity(googleMapIntent);
+        } catch (ActivityNotFoundException e) {
+            Uri webMapUri = Uri.parse(
+                    "https://www.google.com/maps/dir/?api=1"
+                            + "&destination="
+                            + place.latitude
+                            + ","
+                            + place.longitude
+                            + "&travelmode=driving"
+            );
+
+            Intent webIntent = new Intent(Intent.ACTION_VIEW, webMapUri);
+            startActivity(webIntent);
+        }
     }
 
     private void setActiveChip(TextView activeChip) {
