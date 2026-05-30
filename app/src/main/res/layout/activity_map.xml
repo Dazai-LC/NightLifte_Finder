@@ -11,7 +11,6 @@
         android:layout_height="match_parent"
         android:layout_marginBottom="76dp" />
 
-    <!-- TOP UI -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -128,12 +127,10 @@
                     android:textColor="@color/text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
-
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>
 
-    <!-- MAP CONTROL BUTTONS -->
     <LinearLayout
         android:layout_width="54dp"
         android:layout_height="wrap_content"
@@ -190,11 +187,10 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- PLACE INFO CARD -->
     <LinearLayout
         android:id="@+id/placeInfoCard"
         android:layout_width="match_parent"
-        android:layout_height="138dp"
+        android:layout_height="190dp"
         android:layout_gravity="bottom"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
@@ -259,10 +255,23 @@
                 android:text="Bấm marker để xem thông tin quán"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btnDirection"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/chip_active_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="🧭 Chỉ đường"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- BOTTOM NAVIGATION -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="76dp"
